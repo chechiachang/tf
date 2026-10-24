@@ -1,0 +1,18 @@
+module "vcn" {
+  source  = "oracle-terraform-modules/vcn/oci"
+  version = "3.6.0"
+
+  compartment_id = oci_identity_compartment.this.id
+  label_prefix   = "asre"
+  vcn_name       = var.vcn_name
+  vcn_dns_label  = "asrefree"
+  vcn_cidrs      = [var.vcn_cidr]
+  # Manage the default list below instead of either built-in preset.
+  lockdown_default_seclist = null
+  create_internet_gateway  = false
+  create_nat_gateway       = false
+  create_service_gateway   = false
+  enable_ipv6              = false
+
+  subnets = var.subnets
+}

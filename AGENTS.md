@@ -2,15 +2,19 @@
 
 This is a Terraform live-infrastructure repository. Keep changes small and follow the existing stack and module layout.
 
-## Terraform Changes
+## Less is better
 
-- Run `terraform fmt` on changed files and validate from the relevant stack directory.
-- Review the Terraform plan before proposing infrastructure changes.
+Extremely compact and simple style description is preferred.
+
+## Infrastructure Changes
+
+- Use Terragrunt for every stack command; run `terragrunt hcl fmt` and validate from the stack directory.
+- Prefer maintained community OCI modules. Add custom modules under `oracle/modules/` only when needed.
 - Never commit credentials, state files, or other secrets.
 
 ## Security Review
 
-Security first: review every change and plan for least-privilege IAM, public exposure, network access, secret handling, and unintended destructive changes **before committing**. Resolve findings before commit.
+Before committing, review changes and plans for least-privilege IAM, public exposure, network access, secret handling, and destructive changes. Resolve findings first.
 
 ## Documentation
 

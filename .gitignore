@@ -1,5 +1,6 @@
 # Terraform working files
 **/.terraform/
+**/.terragrunt-cache/
 *.tfstate*
 crash.log
 crash.*.log
@@ -13,3 +14,7 @@ override.tf.json
 *_override.tf.json
 .terraformrc
 terraform.rc
+
+# OCI local credentials
+.oci/
+oci_api_key.pem
