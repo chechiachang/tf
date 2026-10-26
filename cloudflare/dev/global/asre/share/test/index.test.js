@@ -46,6 +46,7 @@ describe("share worker", () => {
 
   it("returns a random capability URL and safely renders uploaded markup as text", async () => {
     const { env } = environment();
+    env.MAX_UPLOAD_BYTES = "64";
     const uploaded = await upload(env, "<script>alert(1)</script>");
     expect(uploaded.status).toBe(201);
     const { url } = await uploaded.json();
