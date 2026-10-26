@@ -36,15 +36,15 @@ jobs:
       matrix:
         root: ${{ fromJson(needs.discover.outputs.matrix) }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: hashicorp/setup-terraform@v3
+      - uses: actions/checkout@v7
+      - uses: hashicorp/setup-terraform@v4
         with:
-          terraform_version: "1.16.7"
+          terraform_version: "1.17.0"
           terraform_wrapper: false
       - name: Check Terraform formatting
         run: terraform fmt -check -recursive "${{ matrix.root }}"
       - name: Initialize without a backend
-        run: terraform -chdir="${{ matrix.root }}" init -backend=false -input=false -lockfile=readonly
+        run: terraform -chdir="${{ matrix.root }}" init -backend=false -input=false
       - name: Validate configuration
         run: terraform -chdir="${{ matrix.root }}" validate -no-color
 
@@ -54,11 +54,12 @@ jobs:
     if: needs.discover.outputs.has-roots == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: bridgecrewio/checkov-action@v12
+      - uses: actions/checkout@v7
+      - uses: bridgecrewio/checkov-action@v12.1347.0
         with:
           directory: .
           framework: terraform
+          checkov_version: 3.3.30
           quiet: true
           soft_fail: false
           # Keep this list empty unless a reviewed, documented suppression is required.
