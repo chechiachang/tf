@@ -1,0 +1,65 @@
+name: Terraform
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  discover:
+    name: Find Terraform roots
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.roots.outputs.matrix }}
+      has-roots: ${{ steps.roots.outputs.has-roots }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: roots
+        name: Discover roots with Terraform files
+        shell: bash
+        run: |
+          mapfile -t roots < <(find . -type f \( -name '*.tf' -o -name '*.tf.json' \) -not -path '*/.terraform/*' -printf '%h\n' | sort -u)
+          printf 'matrix=%s\n' "$(printf '%s\n' "${roots[@]}" | jq -R . | jq -sc .)" >> "$GITHUB_OUTPUT"
+          if ((${#roots[@]})); then echo 'has-roots=true' >> "$GITHUB_OUTPUT"; else echo 'has-roots=false' >> "$GITHUB_OUTPUT"; fi
+
+  terraform:
+    name: Format and validate (${{ matrix.root }})
+    needs: discover
+    if: needs.discover.outputs.has-roots == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        root: ${{ fromJson(needs.discover.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.8"
+          terraform_wrapper: false
+      - name: Check Terraform formatting
+        run: terraform fmt -check -recursive "${{ matrix.root }}"
+      - name: Initialize without a backend
+        run: terraform -chdir="${{ matrix.root }}" init -backend=false -input=false -lockfile=readonly
+      - name: Validate configuration
+        run: terraform -chdir="${{ matrix.root }}" validate -no-color
+
+  checkov:
+    name: Checkov static analysis
+    needs: discover
+    if: needs.discover.outputs.has-roots == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: .
+          framework: terraform
+          quiet: true
+          soft_fail: false
+          # Keep this list empty unless a reviewed, documented suppression is required.
+          skip_check: ""
