@@ -53,8 +53,9 @@ describe("share worker", () => {
     expect(url).toMatch(/^https:\/\/share\.example\/s\/[A-Za-z0-9_-]{43}$/);
     const page = await worker.fetch(new Request(url), env);
     expect(page.headers.get("Content-Security-Policy")).toContain("default-src 'none'");
-    expect(await page.text()).toContain("&lt;script&gt;");
-    expect(await page.text()).not.toContain("<script>");
+    const html = await page.text();
+    expect(html).toContain("&lt;script&gt;");
+    expect(html).not.toContain("<script>");
     expect((await worker.fetch(new Request("https://share.example/s/nope"), env)).status).toBe(404);
   });
 
