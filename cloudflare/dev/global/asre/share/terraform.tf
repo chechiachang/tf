@@ -95,7 +95,7 @@ resource "cloudflare_workers_script_subdomain" "share" {
 resource "cloudflare_workers_cron_trigger" "cleanup" {
   account_id  = var.account_id
   script_name = cloudflare_workers_script.share.script_name
-  schedules   = ["17 * * * *"]
+  schedules   = [{ cron = "17 * * * *" }]
 }
 
 output "worker_url" {
