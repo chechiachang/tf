@@ -24,6 +24,7 @@ dependency "network" {
 }
 
 inputs = {
+  boot_volume_size_in_gbs     = 100
   auth                        = include.root.locals.auth
   region                      = include.region.locals.region
   profile                     = include.root.locals.profile
@@ -32,4 +33,5 @@ inputs = {
   subnet_ocid                 = dependency.network.outputs.subnet_ocids.instance
   network_security_group_ocid = dependency.network.outputs.instance_nsg_ocid
   ssh_public_key              = file("${get_env("HOME")}/.ssh/id_rsa.pub")
+  user_data                   = filebase64("${get_terragrunt_dir()}/cloud-init.yaml")
 }

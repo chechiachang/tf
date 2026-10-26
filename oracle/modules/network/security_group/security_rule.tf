@@ -42,3 +42,20 @@ resource "oci_core_network_security_group_security_rule" "mysql_to_database" {
     }
   }
 }
+
+resource "oci_core_network_security_group_security_rule" "https_to_internet" {
+  network_security_group_id = oci_core_network_security_group.instance.id
+  description               = "HTTPS for package repositories and container registries."
+  direction                 = "EGRESS"
+  protocol                  = "6"
+  destination               = "0.0.0.0/0"
+  destination_type          = "CIDR_BLOCK"
+  stateless                 = false
+
+  tcp_options {
+    destination_port_range {
+      min = 443
+      max = 443
+    }
+  }
+}

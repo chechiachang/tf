@@ -10,7 +10,7 @@ module "vcn" {
   # Manage the default list below instead of either built-in preset.
   lockdown_default_seclist = null
   create_internet_gateway  = false
-  create_nat_gateway       = false
+  create_nat_gateway       = true
   create_service_gateway   = false
   enable_ipv6              = false
 
