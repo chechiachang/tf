@@ -1,23 +1,23 @@
-# Telegram long-response share worker
+# Cloudflare message share service
 
-Text-only `POST /api/share` returns an unguessable public capability URL at `GET /s/<43-char-random-token>`. Uploads require bearer authentication, allow `text/plain`/`text/markdown`, and are limited to 64 KiB. Content expires after 24 hours (configurable up to 7 days). Possession of the URL grants access; it is not user authentication. Never upload credentials or content requiring access control.
+This module provisions a private R2 bucket and a public Workers.dev endpoint. `POST /api/share` requires `Authorization: Bearer <UPLOAD_TOKEN>`; it stores bounded UTF-8 plain text/Markdown. The response is a long capability URL (`GET /s/<43-char-random-token>`) that displays the message directly, without a download or secondary lookup. Anyone holding the URL can read it. There is no public R2 endpoint, directory listing, or browsing route; tokenized objects are only fetched through the Worker. Do not upload secrets, credentials, personal data, or any other sensitive content. This is public-by-link, not authentication or access control.
 
-## Deploy
+Objects expire in R2 at the configured TTL and an hourly scheduled Worker removes stale objects. The handler independently refuses expired records. Default expiry is 24 hours, configurable between 60 seconds and 7 days. Upload size defaults to 64 KiB and can only be reduced. Responses use escaped HTML, restrictive CSP, `nosniff`, and no-store headers.
 
-Requires Node/npm and Wrangler. From this directory:
+## Provisioning
+
+Terraform uses the Cloudflare provider and deploys `src/index.js` as a module Worker with an R2 binding, Workers.dev subdomain, and hourly cron trigger. Choose the API token and account ID outside the repository; the token requires account Workers Scripts edit and R2 storage edit permissions. Supply the credentials only to Terraform's environment:
 
 ```sh
-npm install
-npx wrangler r2 bucket create tf-asre-share
-npx wrangler secret put UPLOAD_TOKEN
-npm test
-npx wrangler deploy
+export CLOUDFLARE_API_TOKEN='...'
+export TF_VAR_account_id='...'
+export TF_VAR_upload_token="$(openssl rand -hex 32)"
+cd cloudflare/dev/global/asre/share
+terraform init
+terraform plan
+terraform apply
 ```
 
-Set a long random `UPLOAD_TOKEN`; keep it only in protected caller configuration. `MAX_UPLOAD_BYTES` and `TTL_SECONDS` in `wrangler.toml` may be lowered/adjusted within enforced limits. Object expiration is set at write time; a scheduled Worker also deletes expired entries hourly. Monitor usage and configure billing alerts. Cloudflare pricing, limits and free allowances change; check [`cloudflare/free.csv`](../../../free.csv) and the linked official documentation before relying on any figure.
+Do not put secret values in committed tfvars, CI logs, outputs, or source control. Terraform marks secret variables sensitive, but Terraform state contains the Worker secret binding and must be stored with restricted access. `worker_url` is the public `https://<worker>.<account>.workers.dev` base; send the URL returned from the authenticated upload request as the message reply. No custom domain is necessary, keeping setup independent of a zone.
 
-`dev/global/asre` is the repository's organizational path, not a Cloudflare location. Workers run on Cloudflare's global edge network; conventional region selection/pinning is not available. R2 placement follows Cloudflare's storage model rather than OCI-style region selection.
-
-## Telegram caller protocol
-
-After normalizing the final Telegram response to UTF-8 text, the Telegram caller (e.g. Sumire) decides when it exceeds its own message limit. Send the entire text as raw UTF-8 `text/plain` with `Authorization: Bearer <UPLOAD_TOKEN>` to `POST https://<worker-host>/api/share`. On `201`, read JSON `{ "url": "...", "expires_at": "..." }` and send `url` as the Telegram reply instead of the oversized response. On errors, follow the caller's existing split/truncate fallback. Never log or expose the upload token. This service requires no Sumire changes; no SDK/protocol beyond the HTTP contract is assumed.
+Run the Worker unit tests with `npm install && npm test` from this directory. Do not run apply except in an explicitly authorized deployment.

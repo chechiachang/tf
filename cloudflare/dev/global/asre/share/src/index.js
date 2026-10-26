@@ -42,13 +42,13 @@ async function handle(request, env) {
       return response("Unauthorized", 401);
     }
     const declared = Number(request.headers.get("Content-Length"));
-    if (!Number.isSafeInteger(declared) || declared < 0 || declared > maxBytes) return response("Payload too large", 413);
+    if (request.headers.get("Content-Length") === null || !Number.isSafeInteger(declared) || declared < 0 || declared > maxBytes) return response("Payload too large", 413);
     const type = (request.headers.get("Content-Type") || "").split(";", 1)[0].trim().toLowerCase();
     if (type !== "text/plain" && type !== "text/markdown") return response("Use text/plain or text/markdown", 415);
 
     const text = await request.text();
     const bytes = new TextEncoder().encode(text);
-    if (bytes.byteLength > maxBytes) return response("Payload too large", 413);
+    if (bytes.byteLength > maxBytes || bytes.byteLength !== declared) return response("Payload too large", 413);
     if (bytes.byteLength === 0) return response("Empty content", 400);
 
     const token = await createToken();
