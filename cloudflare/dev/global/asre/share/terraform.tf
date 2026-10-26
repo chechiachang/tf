@@ -61,8 +61,7 @@ resource "cloudflare_workers_script" "share" {
   script_name        = var.worker_name
   content            = file("${path.module}/src/index.js")
   compatibility_date = "2026-10-26"
-  module             = true
-
+  main_module        = "index.js"
   bindings = [
     {
       name        = "SHARES"
@@ -85,8 +84,6 @@ resource "cloudflare_workers_script" "share" {
       text = var.upload_token
     }
   ]
-
-  depends_on = [cloudflare_r2_bucket.shares]
 }
 
 resource "cloudflare_workers_script_subdomain" "share" {
