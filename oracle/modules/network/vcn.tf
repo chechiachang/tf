@@ -1,6 +1,6 @@
 module "vcn" {
   source  = "oracle-terraform-modules/vcn/oci"
-  version = "3.6.0"
+  version = "4.0.0"
 
   compartment_id = oci_identity_compartment.this.id
   label_prefix   = "asre"
