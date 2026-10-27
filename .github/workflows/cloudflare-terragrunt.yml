@@ -1,0 +1,93 @@
+name: Cloudflare Terragrunt
+
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: "Choose a read-only plan or an explicitly approved apply"
+        type: choice
+        required: true
+        default: plan
+        options:
+          - plan
+          - apply
+      confirm_apply:
+        description: "For apply only, type APPLY to confirm"
+        type: string
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudflare-terragrunt-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    name: Terragrunt plan
+    if: github.event_name == 'workflow_dispatch' && inputs.operation == 'plan'
+    runs-on: ubuntu-latest
+    environment: cloudflare-production
+    steps:
+      - name: Guard dispatch source
+        env:
+          REF: ${{ github.ref }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          test "$REPOSITORY" = "chechiachang/tf"
+          test "$REF" = "refs/heads/feat/cloudflare-share-terraform-ci"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.ref }}
+          persist-credentials: false
+      - uses: gruntwork-io/terragrunt-action@8c1d96b76d445fd2e41475a3f0b63dcd1d9cc077 # v3.4.1
+        with:
+          tg_version: 1.2.1
+          tf_path: terraform
+          tg_dir: cloudflare/dev/global/asre/share
+          tg_command: plan -out=tfplan -input=false -lockfile=readonly
+          tg_add_approve: "0"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          TF_VAR_account_id: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          TF_VAR_upload_token: ${{ secrets.CLOUDFLARE_UPLOAD_TOKEN }}
+      - name: Save plan artifact
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: cloudflare-share-plan-${{ github.run_id }}
+          path: cloudflare/dev/global/asre/share/**/tfplan
+          if-no-files-found: error
+          retention-days: 5
+
+  apply:
+    name: Approved Terragrunt apply
+    if: github.event_name == 'workflow_dispatch' && inputs.operation == 'apply'
+    runs-on: ubuntu-latest
+    environment: cloudflare-production
+    steps:
+      - name: Guard dispatch source and require confirmation
+        env:
+          REF: ${{ github.ref }}
+          REPOSITORY: ${{ github.repository }}
+          CONFIRMATION: ${{ inputs.confirm_apply }}
+        run: |
+          test "$REPOSITORY" = "chechiachang/tf"
+          test "$REF" = "refs/heads/feat/cloudflare-share-terraform-ci"
+          test "$CONFIRMATION" = "APPLY"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.ref }}
+          persist-credentials: false
+      - uses: gruntwork-io/terragrunt-action@8c1d96b76d445fd2e41475a3f0b63dcd1d9cc077 # v3.4.1
+        with:
+          tg_version: 1.2.1
+          tf_path: terraform
+          tg_dir: cloudflare/dev/global/asre/share
+          tg_command: apply -auto-approve -input=false -lockfile=readonly
+          tg_add_approve: "0"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          TF_VAR_account_id: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          TF_VAR_upload_token: ${{ secrets.CLOUDFLARE_UPLOAD_TOKEN }}
