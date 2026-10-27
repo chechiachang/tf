@@ -23,4 +23,4 @@ git submodule update --init --recursive
 
 ## Cloudflare
 
-The `chechiachang/tf` share stack provisions private R2 bucket `tf-asre-share`. Its retained Worker has no public workers.dev hostname or route. abot uploads long responses directly with bucket-scoped S3 credentials and sends presigned GET links. Configure Object Read & Write permissions scoped to this bucket in abot's protected environment only. Keep link TTL within the bucket's one-day lifecycle retention.
+The `cloudflare/dev/global/asre/share` Terragrunt stack provisions the private `tf-asre-share` R2 bucket and one-day lifecycle expiry for abot's direct uploads. No Worker or public bucket access is provisioned. See the [stack README](cloudflare/dev/global/asre/share/README.md) for S3 credential handling and least-privilege guidance. Keep presigned GET URLs shorter-lived than object retention; treat the URLs as bearer credentials.
