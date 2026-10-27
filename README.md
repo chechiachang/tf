@@ -20,3 +20,7 @@ Initialize the Azure submodule after cloning:
 ```sh
 git submodule update --init --recursive
 ```
+
+## Cloudflare
+
+The `chechiachang/tf` share stack provisions private R2 bucket `tf-asre-share`. Its retained Worker has no public workers.dev hostname or route. abot uploads long responses directly with bucket-scoped S3 credentials and sends presigned GET links. Configure Object Read & Write permissions scoped to this bucket in abot's protected environment only. Keep link TTL within the bucket's one-day lifecycle retention.
