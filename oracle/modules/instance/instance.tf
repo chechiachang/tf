@@ -1,6 +1,5 @@
 module "free_arm_instance" {
-  source  = "oracle-terraform-modules/compute-instance/oci"
-  version = "2.4.1"
+  source = "github.com/oracle-terraform-modules/terraform-oci-compute-instance?ref=b19dbe063ab82529c9ef71c92d1472fba2d30595"
 
   compartment_ocid            = var.compartment_ocid
   ad_number                   = 1

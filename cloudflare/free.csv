@@ -1,0 +1,9 @@
+category,feature,free_allowance,limitations,source_url,checked_on
+Workers,Requests,"100,000 requests per day per account",Daily quota; CPU and subrequest limits apply; excess may be rejected or billed depending on plan.,https://developers.cloudflare.com/workers/platform/pricing/,2026-10-26
+Workers,CPU time,"10 ms CPU time per invocation on Free plan",Wall-clock duration is distinct from CPU time; larger CPU allocation requires paid plan.,https://developers.cloudflare.com/workers/platform/limits/,2026-10-26
+Workers,Static assets,"Free plan includes Workers Static Assets",Separate limits and terms apply; not required by share service.,https://developers.cloudflare.com/workers/static-assets/,2026-10-26
+R2,Storage,"10 GB-month per month",Standard storage class; usage above included amount billed; request classes have separate included allowances.,https://developers.cloudflare.com/r2/pricing/,2026-10-26
+R2,Class A operations,"1 million requests per month",Writes/list operations; excess billed at current rate.,https://developers.cloudflare.com/r2/pricing/,2026-10-26
+R2,Class B operations,"10 million requests per month",Reads; excess billed at current rate.,https://developers.cloudflare.com/r2/pricing/,2026-10-26
+R2,Egress,"No egress fees",Other storage; operation and Workers usage limits/prices remain applicable.,https://developers.cloudflare.com/r2/pricing/,2026-10-26
+Workers,Regions,"Cloudflare global edge network",Workers execute across Cloudflare's global network; conventional selectable region pinning is not available for this service.,https://developers.cloudflare.com/workers/reference/how-workers-works/,2026-10-26

@@ -1,8 +1,8 @@
 module "vcn" {
-  source  = "oracle-terraform-modules/vcn/oci"
-  version = "3.6.0"
+  source = "github.com/oracle-terraform-modules/terraform-oci-vcn?ref=29f2a4d641428896b482d4c6d06a81627a925af4"
 
   compartment_id = oci_identity_compartment.this.id
+  tenancy_id     = var.tenancy_ocid
   label_prefix   = "asre"
   vcn_name       = var.vcn_name
   vcn_dns_label  = "asrefree"
