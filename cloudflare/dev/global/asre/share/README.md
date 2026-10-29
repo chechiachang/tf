@@ -1,22 +1,24 @@
-# Telegram message share service
+# abot direct R2 upload
 
-Terraform contains the Worker and R2 configuration, but `enable_share_infrastructure` defaults to `false`; a normal plan provisions nothing. The source is retained, but the public Workers.dev API, scheduled cleanup Worker, and backing bucket will not be created unless provisioning is deliberately opted into. Serverless Workers have no VM scaling setting to disable. Any existing deployment is not automatically removed by this default; inspect state and explicitly destroy existing resources if required.
+This stack provisions only a private R2 bucket and object lifecycle rule. There is no Worker, workers.dev hostname, public bucket domain, or public read access. abot uploads objects using the bucket's S3-compatible API and returns time-limited presigned GET URLs. Anyone who obtains a URL can read that object until the signature expires (or the object is deleted); treat URLs as bearer credentials.
 
-## Manual Terragrunt workflow
+The default bucket is `tf-asre-share`, located in APAC. Objects expire after one day. Set abot's presigned GET expiry below this retention and below the S3 signature's maximum accepted lifetime. Lifecycle deletion is asynchronous, so it is a retention bound, not a precise deletion deadline.
 
-`.github/workflows/cloudflare-terragrunt.yml` runs only through `workflow_dispatch` on `feat/cloudflare-share-terraform-ci`. Select `plan` to create a short-lived plan artifact. Apply requires selecting `apply`, typing `APPLY`, and approval in the GitHub `cloudflare-production` environment. Configure that environment with required reviewers and prevent self-review. The job applies from configuration, not the plan artifact; review a fresh plan before approving apply. The default infrastructure flag remains false, so apply does not provision the Worker unless the config is deliberately changed and reviewed.
+## Credentials and configuration
 
-Configure these repository/environment settings:
+Terraform uses the Cloudflare provider's `CLOUDFLARE_API_TOKEN` environment variable and `account_id` input. It does not define, accept, or output S3 credentials. Create an R2 S3 API token separately in Cloudflare for abot and inject its access key ID and secret access key only through abot's protected runtime environment/secret manager. Never place either credential in Terraform variables, outputs, repository files, plans, CI logs, or Terraform state. Rotate/revoke the token independently of this Terraform stack.
 
-- Secret `CLOUDFLARE_API_TOKEN`: scoped to only the target Cloudflare account. Cloudflare resource docs specify **Workers Scripts: Read and Write** for the script, workers.dev subdomain, and cron trigger; **Workers R2 Storage: Write** for the bucket. Do not grant account-wide admin or DNS permissions. A plan-only token needs Workers Scripts and R2 read permissions, but the workflow uses one environment-protected token for both.
-- Secret `CLOUDFLARE_UPLOAD_TOKEN`: high-entropy future caller bearer token, only required if the Worker is deliberately enabled. Do not reuse it as the API token.
-- Variable `CLOUDFLARE_ACCOUNT_ID`: target Cloudflare account ID.
-- Create the GitHub environment named `cloudflare-production`, add required reviewers, and disable administrator/self-review bypass where available. No separate GitHub write permission is granted to jobs.
+For abot, create an R2 API token with the **Object Read & Write** preset scoped to the single bucket `tf-asre-share` (or the exact configured bucket name). This is the least-privilege preset Cloudflare provides for the required object uploads and downloads: Cloudflare's preset also includes object listing (`ListBucket`), so it is not accurate to claim that listing is denied. The preset does not grant bucket administration, access to other buckets, or Cloudflare account permissions. Cloudflare does not offer a narrower preset that permits PutObject/GetObject while excluding ListBucket; accept that included permission rather than granting broader bucket/account access. Presigned GET uses the same token credentials to sign requests, and consumers do not receive those credentials. Keep the Cloudflare API token used by Terraform separate and limited to what the provider needs to manage this bucket and lifecycle configuration.
 
-Cloudflare Workers deployment uses account-scoped Workers Scripts permissions. The script uses a Workers.dev subdomain and cron trigger; confirm account-level Workers Scripts edit covers those operations for your account. No zone/DNS permissions are needed. Protect Terraform state and any backend credentials if a remote backend is configured.
+## Terragrunt
 
-For local authorized provisioning only, set `enable_share_infrastructure = true` deliberately. The Terraform `upload_token` variable is sensitive, but Terraform state may contain the binding and must be protected.
+From this directory:
 
-The share API accepts raw UTF-8 text via `POST /api/share`, `Content-Type: text/plain`, and `Authorization: Bearer <UPLOAD_TOKEN>`. It returns an unguessable, expiring `/s/<token>` capability URL that can be read by anyone possessing it. Do not upload secrets, credentials, personal data, or other sensitive content. Uploads are bounded to 64 KiB by default and expire after 24 hours, with hourly cleanup as a backstop.
+```sh
+terragrunt run -- fmt -recursive
+terragrunt run -- init
+terragrunt run -- validate
+terragrunt run -- plan
+```
 
-Run the Worker unit tests with `npm install && npm test`.
+Do not apply without reviewing the plan and securing Terraform state. Outputs disclose only the bucket name, location, and retention period. Provider API tokens are supplied out-of-band through the provider environment; no access keys are stored in Terraform state.

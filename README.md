@@ -20,3 +20,7 @@ Initialize the Azure submodule after cloning:
 ```sh
 git submodule update --init --recursive
 ```
+
+## Cloudflare
+
+The `cloudflare/dev/global/asre/share` Terragrunt stack provisions the private `tf-asre-share` R2 bucket and one-day lifecycle expiry for abot's direct uploads. No Worker or public bucket access is provisioned. See the [stack README](cloudflare/dev/global/asre/share/README.md) for S3 credential handling and least-privilege guidance. Keep presigned GET URLs shorter-lived than object retention; treat the URLs as bearer credentials.
