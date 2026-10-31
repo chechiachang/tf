@@ -21,73 +21,92 @@ permissions:
   contents: read
 
 concurrency:
-  group: cloudflare-terragrunt-${{ github.ref }}
+  group: cloudflare-terragrunt-abot-share
   cancel-in-progress: false
 
 jobs:
-  plan:
-    name: Terragrunt plan
-    if: github.event_name == 'workflow_dispatch' && inputs.operation == 'plan'
+  deploy:
+    name: Terragrunt ${{ inputs.operation }}
     runs-on: ubuntu-latest
     environment: cloudflare-production
     steps:
-      - name: Guard dispatch source
+      - name: Guard dispatch source and apply confirmation
         env:
           REF: ${{ github.ref }}
           REPOSITORY: ${{ github.repository }}
+          OPERATION: ${{ inputs.operation }}
+          CONFIRMATION: ${{ inputs.confirm_apply }}
         run: |
+          set -euo pipefail
           test "$REPOSITORY" = "chechiachang/tf"
-          test "$REF" = "refs/heads/feat/cloudflare-share-terraform-ci"
+          test "$REF" = "refs/heads/main"
+          case "$OPERATION" in
+            plan) ;;
+            apply) test "$CONFIRMATION" = "APPLY" ;;
+            *) exit 1 ;;
+          esac
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.ref }}
           persist-credentials: false
-      - uses: gruntwork-io/terragrunt-action@8c1d96b76d445fd2e41475a3f0b63dcd1d9cc077 # v3.4.1
+      - name: Configure OCI session
+        env:
+          OCI_TENANCY_OCID: ${{ vars.OCI_TENANCY_OCID }}
+          OCI_SESSION_FINGERPRINT: ${{ vars.OCI_SESSION_FINGERPRINT }}
+          OCI_SESSION_PRIVATE_KEY: ${{ secrets.OCI_SESSION_PRIVATE_KEY }}
+          OCI_SESSION_TOKEN: ${{ secrets.OCI_SESSION_TOKEN }}
+        run: |
+          set -euo pipefail
+          test -n "$OCI_TENANCY_OCID"
+          test -n "$OCI_SESSION_FINGERPRINT"
+          test -n "$OCI_SESSION_PRIVATE_KEY"
+          test -n "$OCI_SESSION_TOKEN"
+          umask 077
+          mkdir -p "$HOME/.oci"
+          printf '%s\n' "$OCI_SESSION_PRIVATE_KEY" > "$HOME/.oci/session-key.pem"
+          printf '%s' "$OCI_SESSION_TOKEN" > "$HOME/.oci/session-token"
+          printf '%s\n' '[tf]' \
+            "tenancy=$OCI_TENANCY_OCID" \
+            "fingerprint=$OCI_SESSION_FINGERPRINT" \
+            "key_file=$HOME/.oci/session-key.pem" \
+            "security_token_file=$HOME/.oci/session-token" \
+            'region=ap-osaka-1' > "$HOME/.oci/config"
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
+        with:
+          terraform_version: 1.14.2
+          terraform_wrapper: false
+      - name: Terragrunt plan
+        if: inputs.operation == 'plan'
+        uses: gruntwork-io/terragrunt-action@8c1d96b76d445fd2e41475a3f0b63dcd1d9cc077 # v3.4.1
         with:
           tg_version: 1.2.1
           tf_path: terraform
-          tg_dir: cloudflare/dev/global/asre/share
-          tg_command: plan -out=tfplan -input=false -lockfile=readonly
+          tg_dir: cloudflare/dev/global/abot/share
+          tg_command: run -- plan -out=${{ github.workspace }}/cloudflare-share.tfplan -input=false -lockfile=readonly
           tg_add_approve: "0"
+          tg_output_capture: "0"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          TF_VAR_account_id: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
-          TF_VAR_upload_token: ${{ secrets.CLOUDFLARE_UPLOAD_TOKEN }}
       - name: Save plan artifact
+        if: inputs.operation == 'plan'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: cloudflare-share-plan-${{ github.run_id }}
-          path: cloudflare/dev/global/asre/share/**/tfplan
+          path: cloudflare-share.tfplan
           if-no-files-found: error
           retention-days: 5
-
-  apply:
-    name: Approved Terragrunt apply
-    if: github.event_name == 'workflow_dispatch' && inputs.operation == 'apply'
-    runs-on: ubuntu-latest
-    environment: cloudflare-production
-    steps:
-      - name: Guard dispatch source and require confirmation
-        env:
-          REF: ${{ github.ref }}
-          REPOSITORY: ${{ github.repository }}
-          CONFIRMATION: ${{ inputs.confirm_apply }}
-        run: |
-          test "$REPOSITORY" = "chechiachang/tf"
-          test "$REF" = "refs/heads/feat/cloudflare-share-terraform-ci"
-          test "$CONFIRMATION" = "APPLY"
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ github.ref }}
-          persist-credentials: false
-      - uses: gruntwork-io/terragrunt-action@8c1d96b76d445fd2e41475a3f0b63dcd1d9cc077 # v3.4.1
+      - name: Terragrunt apply
+        if: inputs.operation == 'apply'
+        uses: gruntwork-io/terragrunt-action@8c1d96b76d445fd2e41475a3f0b63dcd1d9cc077 # v3.4.1
         with:
           tg_version: 1.2.1
           tf_path: terraform
-          tg_dir: cloudflare/dev/global/asre/share
-          tg_command: apply -auto-approve -input=false -lockfile=readonly
+          tg_dir: cloudflare/dev/global/abot/share
+          tg_command: run -- apply -auto-approve -input=false -lockfile=readonly
           tg_add_approve: "0"
+          tg_output_capture: "0"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          TF_VAR_account_id: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
-          TF_VAR_upload_token: ${{ secrets.CLOUDFLARE_UPLOAD_TOKEN }}
+      - name: Remove OCI session files
+        if: always()
+        run: rm -f "$HOME/.oci/config" "$HOME/.oci/session-key.pem" "$HOME/.oci/session-token"

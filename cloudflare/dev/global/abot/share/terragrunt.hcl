@@ -10,5 +10,3 @@ inputs = {
   bucket_name           = "abot-share"
   object_retention_days = 90
 }
-
-

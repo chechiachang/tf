@@ -13,8 +13,9 @@ resource "cloudflare_r2_bucket" "this" {
 resource "cloudflare_r2_bucket_lifecycle" "this" {
   count = var.object_retention_days == null ? 0 : 1
 
-  account_id  = var.account_id
-  bucket_name = cloudflare_r2_bucket.this.name
+  account_id   = var.account_id
+  bucket_name  = cloudflare_r2_bucket.this.name
+  jurisdiction = var.jurisdiction
 
   rules = [{
     id      = "expire-objects"
