@@ -2,7 +2,7 @@ resource "oci_core_network_security_group_security_rule" "ssh_from_bastion" {
   network_security_group_id = oci_core_network_security_group.instance.id
   direction                 = "INGRESS"
   protocol                  = "6"
-  stateless                 = true
+  stateless                 = false
   source                    = "${var.bastion_private_endpoint_ip}/32"
   source_type               = "CIDR_BLOCK"
 
