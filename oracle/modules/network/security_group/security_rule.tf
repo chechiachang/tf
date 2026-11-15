@@ -61,3 +61,21 @@ resource "oci_core_network_security_group_security_rule" "https_to_internet" {
     }
   }
 }
+
+resource "oci_core_network_security_group_security_rule" "tailscale_udp" {
+  for_each                  = toset(["3478", "41641"])
+  network_security_group_id = oci_core_network_security_group.instance.id
+  description               = "Tailscale STUN and direct WireGuard; DERP fallback uses 443."
+  direction                 = "EGRESS"
+  protocol                  = "17"
+  destination               = "0.0.0.0/0"
+  destination_type          = "CIDR_BLOCK"
+  stateless                 = false
+
+  udp_options {
+    destination_port_range {
+      min = tonumber(each.value)
+      max = tonumber(each.value)
+    }
+  }
+}
