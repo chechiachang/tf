@@ -15,6 +15,12 @@ packages:
   - ca-certificates
   - curl
   - golang-go
+write_files:
+  - path: /usr/local/sbin/setup-agents
+    owner: root:root
+    permissions: '0700'
+    encoding: b64
+    content: ${agent_setup}
 runcmd:
   - |
     set -eu
@@ -40,3 +46,4 @@ runcmd:
     curl -fsSL "https://github.com/gruntwork-io/terragrunt/releases/latest/download/terragrunt_linux_$(dpkg --print-architecture)" -o /usr/local/bin/terragrunt
     chmod 0755 /usr/local/bin/terragrunt
     systemctl enable --now docker.service
+  - [/usr/local/sbin/setup-agents, worker]

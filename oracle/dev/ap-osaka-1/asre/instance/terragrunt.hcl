@@ -33,5 +33,7 @@ inputs = {
   subnet_ocid                 = dependency.network.outputs.subnet_ocids.instance
   network_security_group_ocid = dependency.network.outputs.instance_nsg_ocid
   ssh_public_key              = file("${get_env("HOME")}/.ssh/id_rsa.pub")
-  user_data                   = filebase64("${get_terragrunt_dir()}/cloud-init.yaml")
+  user_data = base64encode(templatefile("${get_terragrunt_dir()}/cloud-init.yaml", {
+    agent_setup = filebase64("${get_repo_root()}/oracle/scripts/setup-agents.sh")
+  }))
 }
