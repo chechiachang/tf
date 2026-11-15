@@ -55,4 +55,6 @@ sudo docker run --rm hello-world
 sudo docker compose version
 ```
 
+The two AMD micros get a persistent 2 GB `/swapfile` and `vm.swappiness=20` at first boot. Verify with `swapon --show` and `sysctl vm.swappiness`. Existing hosts need manual configuration; do not replace them just to add swap.
+
 State is in the private, versioned `chechia-terraform-state` bucket; never delete it or commit state, credentials, or private keys. Replacing an instance deletes its boot disk; shrinking a disk requires replacement.
