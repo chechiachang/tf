@@ -26,17 +26,30 @@ if ! id agent >/dev/null 2>&1; then
 fi
 chmod 0700 /home/agent
 
-if [[ "$role" == hub ]]; then
-  apt-get install -y gnupg git tmux
-  curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key -o /etc/apt/keyrings/nodesource.asc
-  gpg --batch --yes --dearmor -o /etc/apt/keyrings/nodesource.gpg /etc/apt/keyrings/nodesource.asc
-  chmod a+r /etc/apt/keyrings/nodesource.gpg
-  echo 'deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main' > /etc/apt/sources.list.d/nodesource.list
-  apt-get update
-  apt-get install -y nodejs
-  node -e 'const [major, minor] = process.versions.node.split(".").map(Number); if (major < 22 || (major === 22 && minor < 19)) { throw new Error("Pi requires Node.js >=22.19"); }'
-  npm install --global --prefix /usr/local --ignore-scripts @earendil-works/pi-coding-agent@1.5.2
-  pi --version
-fi
+apt-get install -y gnupg git sudo
+curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key -o /etc/apt/keyrings/nodesource.asc
+gpg --batch --yes --dearmor -o /etc/apt/keyrings/nodesource.gpg /etc/apt/keyrings/nodesource.asc
+chmod a+r /etc/apt/keyrings/nodesource.gpg
+echo 'deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main' > /etc/apt/sources.list.d/nodesource.list
+apt-get update
+apt-get install -y nodejs
+node -e 'const [major, minor] = process.versions.node.split(".").map(Number); if (major < 22 || (major === 22 && minor < 19)) { throw new Error("Pi requires Node.js >=22.19"); }'
+npm install --global --prefix /usr/local --ignore-scripts @earendil-works/pi-coding-agent@1.5.2
+pi --version
 
-echo 'Installed. Enroll interactively with sudo tailscale up --ssh and configure tailnet access policies.'
+sudo -H -u agent bash -s <<'HERDR'
+set -euo pipefail
+umask 077
+export PATH="$HOME/.local/bin:$PATH"
+install -d -m 0700 "$HOME/.pi" "$HOME/.pi/agent"
+if [[ ! -x "$HOME/.local/bin/herdr" ]]; then
+  installer=$(mktemp)
+  trap 'rm -f "$installer"' EXIT
+  curl -fsSL --retry 3 --connect-timeout 10 --max-time 60 https://herdr.dev/install.sh -o "$installer"
+  sh "$installer"
+fi
+herdr --version
+herdr integration install pi
+HERDR
+
+echo "Installed Pi and Herdr for $role. Enroll with sudo tailscale up --ssh; run herdr as agent."

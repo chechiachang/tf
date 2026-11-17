@@ -1,6 +1,6 @@
 # Oracle Cloud
 
-Ubuntu 24.04: one ARM instance (100 GB disk) and two AMD micros (50 GB each); private networking, NAT/HTTPS egress, Docker and Tailscale installed by cloud-init. The ARM hub also has Node.js 22, Pi 1.5.2 and tmux.
+Ubuntu 24.04: one ARM instance (100 GB disk) and two AMD micros (50 GB each); private networking, NAT/HTTPS egress, Docker, Tailscale, Node.js 22, Pi 1.5.2, and Herdr installed by cloud-init.
 
 ## 1. Authenticate
 
@@ -109,11 +109,39 @@ Merge these rules into your tailnet policy, replacing the login placeholder. Rem
 Enable Tailscale on your phone, then use an SSH app to connect to the hub's Tailscale IP as `agent`. In a project directory:
 
 ```sh
-tmux new-session -A -s pi
 pi
 ```
 
-Use Pi's `/login` to authenticate. Detach with `Ctrl-b d`; reconnect with the same tmux command. Sessions survive phone disconnects, not VM reboots. Pi has no native phone GUI or configured multi-agent orchestrator; worker access is ordinary SSH over Tailscale.
+Use Pi's `/login` to authenticate. Pi runs in the foreground; SSH disconnects can stop it. Pi has no native phone GUI or configured multi-agent orchestrator.
+
+### Herdr and worker agents
+
+As `agent`, save OpenAI credentials in `/home/agent/.pi/agent/auth.json`, mode `0600`; never in the repo. Each VM needs its own credentials:
+
+```json
+{"openai":{"type":"api_key","key":"<api-key>"}}
+```
+
+On A1, verify SSH to each worker, then add it and open the persistent dashboard:
+
+```sh
+herdr machine add agent@<worker1-tailscale-ip> --label worker1
+herdr machine add agent@<worker2-tailscale-ip> --label worker2
+herdr --session a1
+```
+
+Select each machine in the sidebar, enter its project directory, and run `pi --provider openai`. Detach with Ctrl+B, then Q. In an A1 shell pane, use `herdr --machine worker1 agent list`, then `herdr --machine worker1 agent prompt <target> '<task>' --wait`. Herdr does not automatically distribute tasks or copy projects or credentials.
+
+Enroll all three VMs in the same tailnet. From the hub as `agent`, connect to either micro using its Tailscale IP (or MagicDNS name):
+
+```sh
+tailscale status
+ssh agent@<micro-tailscale-ip>
+# Run a worker command without opening a shell:
+ssh agent@<micro-tailscale-ip> 'hostname'
+```
+
+Tailscale SSH uses tailnet identity; no shared SSH keys are needed. The policy above allows hub → micros, not micros → hub. For reverse access, add a grant from `tag:pi-worker` to `tag:pi-hub` for `tcp:22` and an SSH `accept` rule with the same source/destination and `users: ["agent"]`, then run `ssh agent@<hub-tailscale-ip>` from a micro. This provides SSH access, not automatic worker registration or job scheduling.
 
 The `agent` account has no sudo or Docker-group access. Keep provider credentials in this account's private home, never the repository; grant only necessary OCI permissions and review plans before applying. Pi can execute shell commands as this account without an approval boundary.
 
