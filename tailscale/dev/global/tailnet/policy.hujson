@@ -1,0 +1,35 @@
+{
+  "groups": {
+    "group:operators": ["chechiachang999@gmail.com"]
+  },
+  "tagOwners": {
+    "tag:pi-hub": ["group:operators"],
+    "tag:pi-worker": ["group:operators"]
+  },
+  "grants": [
+    {
+      "src": ["group:operators"],
+      "dst": ["tag:pi-hub", "tag:pi-worker"],
+      "ip": ["tcp:22"]
+    },
+    {
+      "src": ["tag:pi-hub"],
+      "dst": ["tag:pi-worker"],
+      "ip": ["tcp:22"]
+    }
+  ],
+  "ssh": [
+    {
+      "action": "check",
+      "src": ["group:operators"],
+      "dst": ["tag:pi-hub", "tag:pi-worker"],
+      "users": ["agent"]
+    },
+    {
+      "action": "accept",
+      "src": ["tag:pi-hub"],
+      "dst": ["tag:pi-worker"],
+      "users": ["agent"]
+    }
+  ]
+}

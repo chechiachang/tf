@@ -26,7 +26,8 @@ if ! id agent >/dev/null 2>&1; then
 fi
 chmod 0700 /home/agent
 
-apt-get install -y gnupg git sudo
+apt-get install -y gnupg git sudo openssh-client python3
+loginctl enable-linger agent
 curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key -o /etc/apt/keyrings/nodesource.asc
 gpg --batch --yes --dearmor -o /etc/apt/keyrings/nodesource.gpg /etc/apt/keyrings/nodesource.asc
 chmod a+r /etc/apt/keyrings/nodesource.gpg
@@ -42,7 +43,7 @@ set -euo pipefail
 umask 077
 export PATH="$HOME/.local/bin:$PATH"
 install -d -m 0700 "$HOME/.pi" "$HOME/.pi/agent"
-if [[ ! -x "$HOME/.local/bin/herdr" ]]; then
+if [[ ! -x "$HOME/.local/bin/herdr" ]] || ! herdr machine --help >/dev/null 2>&1; then
   installer=$(mktemp)
   trap 'rm -f "$installer"' EXIT
   curl -fsSL --retry 3 --connect-timeout 10 --max-time 60 https://herdr.dev/install.sh -o "$installer"
@@ -50,6 +51,13 @@ if [[ ! -x "$HOME/.local/bin/herdr" ]]; then
 fi
 herdr --version
 herdr integration install pi
+if [[ ! -x "$HOME/.local/bin/herdr-core" ]]; then
+  core_installer=$(mktemp)
+  trap 'rm -f "${installer:-}" "$core_installer"' EXIT
+  curl -fsSL --retry 3 --connect-timeout 10 --max-time 60 https://releases.herdr.dev/core/install.sh -o "$core_installer"
+  sh "$core_installer"
+fi
+herdr-core --version
 HERDR
 
-echo "Installed Pi and Herdr for $role. Enroll with sudo tailscale up --ssh; run herdr as agent."
+echo "Installed Pi, Herdr and herdr-core for $role. Enroll with sudo tailscale up --ssh --hostname <pi-hub|pi-worker1|pi-worker2>; run herdr as agent."

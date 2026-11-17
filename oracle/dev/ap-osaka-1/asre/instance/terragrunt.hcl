@@ -34,6 +34,7 @@ inputs = {
   network_security_group_ocid = dependency.network.outputs.instance_nsg_ocid
   ssh_public_key              = file("${get_env("HOME")}/.ssh/id_rsa.pub")
   user_data = base64encode(templatefile("${get_terragrunt_dir()}/cloud-init.yaml", {
-    agent_setup = filebase64("${get_repo_root()}/oracle/scripts/setup-agents.sh")
+    agent_setup         = filebase64("${get_repo_root()}/oracle/scripts/setup-agents.sh")
+    herdr_workers_setup = filebase64("${get_repo_root()}/oracle/scripts/configure-herdr-workers.sh")
   }))
 }
