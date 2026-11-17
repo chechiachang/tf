@@ -7,3 +7,16 @@ R2,Class A operations,"1 million requests per month",Writes/list operations; exc
 R2,Class B operations,"10 million requests per month",Reads; excess billed at current rate.,https://developers.cloudflare.com/r2/pricing/,2026-10-26
 R2,Egress,"No egress fees",Other storage; operation and Workers usage limits/prices remain applicable.,https://developers.cloudflare.com/r2/pricing/,2026-10-26
 Workers,Regions,"Cloudflare global edge network",Workers execute across Cloudflare's global network; conventional selectable region pinning is not available for this service.,https://developers.cloudflare.com/workers/reference/how-workers-works/,2026-10-26
+Pages,Builds,500 builds per month; one concurrent build,Static hosting; Functions consume Workers quota.,https://developers.cloudflare.com/pages/platform/limits/,2026-11-15
+Pages,Files,"20,000 files per site on Free plan",Static site limit; per-file limits also apply.,https://developers.cloudflare.com/pages/platform/limits/,2026-11-15
+D1,Rows read,5 million rows read per day,Workers Free; account-wide; excess operations fail.,https://developers.cloudflare.com/d1/platform/pricing/,2026-11-15
+D1,Rows written,"100,000 rows written per day",Workers Free; account-wide; indexes also consume writes.,https://developers.cloudflare.com/d1/platform/pricing/,2026-11-15
+D1,Storage,5 GB total storage per account,Workers Free; 500 MB per database; excess operations fail.,https://developers.cloudflare.com/d1/platform/pricing/,2026-11-15
+D1,Databases,10 databases per account,Workers Free; database deletion and replacement lose data.,https://developers.cloudflare.com/d1/platform/pricing/,2026-11-15
+KV,Keys read,"100,000 reads per day",Workers Free; account-wide; eventually consistent.,https://developers.cloudflare.com/kv/platform/pricing/,2026-11-15
+KV,Keys written,"1,000 writes per day",Workers Free; account-wide; excess operations fail.,https://developers.cloudflare.com/kv/platform/pricing/,2026-11-15
+KV,Keys deleted,"1,000 deletes per day",Workers Free; account-wide; excess operations fail.,https://developers.cloudflare.com/kv/platform/pricing/,2026-11-15
+KV,List requests,"1,000 list requests per day",Workers Free; account-wide; excess operations fail.,https://developers.cloudflare.com/kv/platform/pricing/,2026-11-15
+KV,Storage,1 GB total storage per account,Workers Free; excess operations fail.,https://developers.cloudflare.com/kv/platform/pricing/,2026-11-15
+Queues,Operations,"10,000 operations per day","Workers Free; a message normally uses write, read, and delete operations.",https://developers.cloudflare.com/workers/platform/pricing/#queues,2026-11-15
+Queues,Message retention,24 hours,Workers Free; not configurable.,https://developers.cloudflare.com/workers/platform/pricing/#queues,2026-11-15

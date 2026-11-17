@@ -1,6 +1,6 @@
 # Oracle Cloud
 
-Ubuntu 24.04: one ARM instance (100 GB disk) and two AMD micros (50 GB each); private networking, NAT/HTTPS egress, Docker, Tailscale, Node.js 22, Pi 1.5.2, and Herdr installed by cloud-init.
+Ubuntu 24.04: one ARM instance (100 GB disk) and two AMD micros (50 GB each); private networking, NAT/HTTPS egress, Docker, Tailscale, Node.js 22, Pi 1.5.2, Herdr, and herdr-core (`hc`) installed by cloud-init.
 
 ## 1. Authenticate
 
@@ -60,11 +60,13 @@ sudo docker compose version
 On each VM, connect through Bastion and enroll interactively:
 
 ```sh
-sudo tailscale up --ssh
+sudo tailscale up --ssh --hostname pi-hub # A1; use pi-worker1 / pi-worker2 on AMDs
 tailscale status
 ```
 
 Approve the login URL in your browser. Tag the ARM VM `tag:pi-hub` and the micros `tag:pi-worker`. No enrollment keys belong in cloud-init or Terraform state.
+
+The [Tailscale stack](../tailscale/README.md) enables private MagicDNS. Keep DNS acceptance enabled (default); the three unique names resolve only inside the tailnet. For already enrolled VMs, use `sudo tailscale set --hostname <name> --accept-dns=true`. Use the actual names from `tailscale status` if a duplicate gets a suffix.
 
 Merge these rules into your tailnet policy, replacing the login placeholder. Remove any existing broad rules that would override these restrictions.
 
@@ -122,15 +124,25 @@ As `agent`, save OpenAI credentials in `/home/agent/.pi/agent/auth.json`, mode `
 {"openai":{"type":"api_key","key":"<api-key>"}}
 ```
 
-On A1, verify SSH to each worker, then add it and open the persistent dashboard:
+On A1 as `agent`, register both workers over MagicDNS, then open the persistent dashboard:
 
 ```sh
-herdr machine add agent@<worker1-tailscale-ip> --label worker1
-herdr machine add agent@<worker2-tailscale-ip> --label worker2
+configure-herdr-workers # defaults: pi-worker1 and pi-worker2
+# Or: configure-herdr-workers <worker1-magicdns-name-or-ip> <worker2-magicdns-name-or-ip>
 herdr --session a1
 ```
 
 Select each machine in the sidebar, enter its project directory, and run `pi --provider openai`. Detach with Ctrl+B, then Q. In an A1 shell pane, use `herdr --machine worker1 agent list`, then `herdr --machine worker1 agent prompt <target> '<task>' --wait`. Herdr does not automatically distribute tasks or copy projects or credentials.
+
+`configure-herdr-workers` saves private SSH aliases and registers `worker1` / `worker2` in both Herdr TUI and herdr-core (separate runtimes). It can be rerun with the same hosts. `agent` lingering keeps terminals alive after logout, not reboot. To run and inspect a core-managed worker terminal from A1:
+
+```sh
+hc run --bg --on worker1 --cwd /home/agent --name pi pi --provider openai
+hc ls
+hc read worker1/pi --lines 100
+hc send worker1/pi '<task>'
+hc attach worker1/pi # Ctrl+\ detaches
+```
 
 Enroll all three VMs in the same tailnet. From the hub as `agent`, connect to either micro using its Tailscale IP (or MagicDNS name):
 
@@ -147,6 +159,6 @@ The `agent` account has no sudo or Docker-group access. Keep provider credential
 
 HTTPS egress supports Tailscale DERP relays without public ingress; connections may be relayed. UDP/direct connectivity is not configured. Keep OCI Bastion for recovery.
 
-Existing VMs do not rerun cloud-init when metadata changes. Copy `scripts/setup-agents.sh` to each VM through Bastion and run `sudo bash setup-agents.sh hub` on ARM or `sudo bash setup-agents.sh worker` on each micro, then enroll. Do not replace VMs just to install these tools.
+Existing VMs do not rerun cloud-init when metadata changes. Copy `scripts/setup-agents.sh` to each VM through Bastion and run `sudo bash setup-agents.sh hub` on ARM or `sudo bash setup-agents.sh worker` on each micro, then enroll. Copy `scripts/configure-herdr-workers.sh` to A1, install it with `sudo install -m 0755 configure-herdr-workers.sh /usr/local/bin/configure-herdr-workers`, and run `configure-herdr-workers` as `agent`. Do not replace VMs just to install these tools.
 
 State is in the private, versioned `chechia-terraform-state` bucket; never delete it or commit state, credentials, or private keys. Replacing an instance deletes its boot disk; shrinking a disk requires replacement. Review instance plans carefully when changing cloud-init.
