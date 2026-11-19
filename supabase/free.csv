@@ -1,0 +1,2 @@
+free_period,category,service,free_allowance,description,source_url,checked_on
+Recurring Free,"Databases, storage, and messaging",Supabase,"Two active projects; 500 MB DB/project; 1 GB files; 50,000 MAU; 500,000 edge invocations",Free projects pause after one week idle; egress limits apply. Catalog only.,https://supabase.com/pricing,2026-11-15

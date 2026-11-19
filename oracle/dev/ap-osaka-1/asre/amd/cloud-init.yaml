@@ -13,9 +13,6 @@ apt:
 swap:
   filename: /swapfile
   size: 2G
-write_files:
-  - path: /etc/sysctl.d/99-swap.conf
-    content: vm.swappiness=20
 package_update: true
 packages:
   - ca-certificates
@@ -23,6 +20,14 @@ packages:
   - golang-go
   - tmux
   - earlyoom
+write_files:
+  - path: /etc/sysctl.d/99-swap.conf
+    content: vm.swappiness=20
+  - path: /usr/local/sbin/setup-agents
+    owner: root:root
+    permissions: '0700'
+    encoding: b64
+    content: ${agent_setup}
 runcmd:
   - |
     set -eu
@@ -51,8 +56,4 @@ runcmd:
     curl -fsSL "https://github.com/gruntwork-io/terragrunt/releases/latest/download/terragrunt_linux_$(dpkg --print-architecture)" -o /usr/local/bin/terragrunt
     chmod 0755 /usr/local/bin/terragrunt
     systemctl enable --now docker.service
-    agent_tmp="$(mktemp -d)"
-    trap 'rm -f "$agent_tmp/herdr"; rmdir "$agent_tmp"' EXIT
-    curl -fsSL https://github.com/herdrdev/herdr/releases/download/v0.9.5/herdr-linux-x86_64 -o "$agent_tmp/herdr"
-    echo "14d9e8bc8b4a9e0118d77c32266f76d461f09b40342eb23752960bd89f59929d  $agent_tmp/herdr" | sha256sum -c -
-    install -m 0755 "$agent_tmp/herdr" /usr/local/bin/herdr
+  - [/usr/local/sbin/setup-agents, worker]

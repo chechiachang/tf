@@ -1,0 +1,2 @@
+free_period,category,service,free_allowance,description,source_url,checked_on
+Recurring Free,"Delivery, observability, and networking",Tailscale Personal,Six users; unlimited user devices; 50 tagged resources to start,Personal use; not the commercial team plan. Existing OCI enrollment.,https://tailscale.com/pricing,2026-11-15

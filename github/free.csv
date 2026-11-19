@@ -1,0 +1,3 @@
+free_period,category,service,free_allowance,description,source_url,checked_on
+Recurring Free,Compute and hosting,GitHub Codespaces,Personal Free: 120 core-hours + 15 GB-month storage/month,60 runtime hours on a 2-core machine; stop idle environments. Not production hosting. Catalog only.,https://docs.github.com/en/billing/concepts/product-billing/github-codespaces,2026-11-15
+Recurring Free,"Delivery, observability, and networking",GitHub Actions,Standard hosted runners free for public repos; personal Free private repos: $12 compute/month + 500 MB artifacts,"Larger runners billed even for public repos; current allowance is monetary, not a fixed minute quota. Existing repo workflows.",https://docs.github.com/en/billing/concepts/product-billing/github-actions,2026-11-15

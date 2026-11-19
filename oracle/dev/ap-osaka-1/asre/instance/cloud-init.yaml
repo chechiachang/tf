@@ -15,8 +15,18 @@ packages:
   - ca-certificates
   - curl
   - golang-go
-  - npm
   - tmux
+write_files:
+  - path: /usr/local/sbin/setup-agents
+    owner: root:root
+    permissions: '0700'
+    encoding: b64
+    content: ${agent_setup}
+  - path: /usr/local/bin/configure-herdr-workers
+    owner: root:root
+    permissions: '0755'
+    encoding: b64
+    content: ${herdr_workers_setup}
 runcmd:
   - |
     set -eu
@@ -44,16 +54,4 @@ runcmd:
     curl -fsSL "https://github.com/gruntwork-io/terragrunt/releases/latest/download/terragrunt_linux_$(dpkg --print-architecture)" -o /usr/local/bin/terragrunt
     chmod 0755 /usr/local/bin/terragrunt
     systemctl enable --now docker.service
-    agent_tmp="$(mktemp -d)"
-    trap 'rm -f "$agent_tmp/herdr" "$agent_tmp/opencode.tar.gz" "$agent_tmp/opencode"; rmdir "$agent_tmp"' EXIT
-    curl -fsSL https://github.com/herdrdev/herdr/releases/download/v0.9.5/herdr-linux-aarch64 -o "$agent_tmp/herdr"
-    echo "17d7536f2da50859523680ef279dffcac8e4a235f4e46fe8da6c2ec44141897c  $agent_tmp/herdr" | sha256sum -c -
-    install -m 0755 "$agent_tmp/herdr" /usr/local/bin/herdr
-    curl -fsSL https://github.com/anomalyco/opencode/releases/download/v1.19.5/opencode-linux-arm64.tar.gz -o "$agent_tmp/opencode.tar.gz"
-    echo "fae5be262d693b7c5e562856cc473e59e741772936db0c0600ac0d5ed5bd088b  $agent_tmp/opencode.tar.gz" | sha256sum -c -
-    tar -xzf "$agent_tmp/opencode.tar.gz" -C "$agent_tmp" opencode
-    install -m 0755 "$agent_tmp/opencode" /usr/local/bin/opencode
-    install -d -m 0755 -o ubuntu -g ubuntu /home/ubuntu/.config /home/ubuntu/.config/opencode /home/ubuntu/.config/opencode/skills /home/ubuntu/.config/opencode/skills/herdr
-    herdr --skill > /home/ubuntu/.config/opencode/skills/herdr/SKILL.md
-    chown ubuntu:ubuntu /home/ubuntu/.config/opencode/skills/herdr/SKILL.md
-    sudo -u ubuntu -H herdr integration install opencode
+  - [/usr/local/sbin/setup-agents, hub]

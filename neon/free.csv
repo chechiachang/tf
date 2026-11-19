@@ -1,0 +1,2 @@
+free_period,category,service,free_allowance,description,source_url,checked_on
+Recurring Free,"Databases, storage, and messaging",Neon Postgres,100 CU-hours + 1 GB storage/project/month; up to 100 projects,"Free plan, no card; 20 GB account storage cap; 5 GB transfer/project/month. Suspends at compute/transfer limit; scales to zero. Catalog only.",https://neon.com/pricing,2026-11-15

@@ -1,0 +1,2 @@
+free_period,category,service,free_allowance,description,source_url,checked_on
+Recurring Free,"Delivery, observability, and networking",Grafana Cloud,"10,000 active metric series; 50 GB logs/month; 14-day retention","Select Free, not Pro's paid platform fee. Catalog only.",https://grafana.com/pricing/,2026-11-15

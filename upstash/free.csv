@@ -1,0 +1,2 @@
+free_period,category,service,free_allowance,description,source_url,checked_on
+Recurring Free,"Databases, storage, and messaging",Upstash Redis,"250 MB data; 500,000 commands + 10 GB bandwidth/month","Select Free, not PAYG. Catalog only.",https://upstash.com/pricing/redis,2026-11-15
