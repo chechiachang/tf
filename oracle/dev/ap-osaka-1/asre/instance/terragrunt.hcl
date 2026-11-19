@@ -32,6 +32,6 @@ inputs = {
   compartment_ocid            = dependency.network.outputs.compartment_ocid
   subnet_ocid                 = dependency.network.outputs.subnet_ocids.instance
   network_security_group_ocid = dependency.network.outputs.instance_nsg_ocid
-  ssh_public_key              = file("${get_env("HOME")}/.ssh/id_rsa.pub")
+  ssh_public_key              = include.root.locals.ssh_public_keys
   user_data                   = filebase64("${get_terragrunt_dir()}/cloud-init.yaml")
 }

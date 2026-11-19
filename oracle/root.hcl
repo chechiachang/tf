@@ -1,6 +1,10 @@
 locals {
-  auth                    = "SecurityToken"
-  profile                 = "tf"
+  auth    = "SecurityToken"
+  profile = "tf"
+  ssh_public_keys = join("\n", compact([
+    trimspace(file("${get_repo_root()}/oracle/ssh/termius.pub")),
+    fileexists("${get_env("HOME")}/.ssh/id_rsa.pub") ? trimspace(file("${get_env("HOME")}/.ssh/id_rsa.pub")) : "",
+  ]))
   objectstorage_namespace = "axyygu1yi2iu"
   terraform_state_bucket  = "chechia-terraform-state"
   # From [tf] tenancy in ~/.oci/config.
