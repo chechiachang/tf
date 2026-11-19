@@ -55,6 +55,8 @@ sudo docker run --rm hello-world
 sudo docker compose version
 ```
 
+The AMD micros get a persistent 2 GB `/swapfile`, `vm.swappiness=20`, and earlyoom. Verify with `swapon --show` and `sysctl vm.swappiness`; configure existing hosts manually, without replacing them.
+
 ## 6. Phone access and Pi
 
 On each VM, connect through Bastion and enroll interactively:
@@ -157,7 +159,7 @@ Tailscale SSH uses tailnet identity; no shared SSH keys are needed. The policy a
 
 The `agent` account has no sudo or Docker-group access. Keep provider credentials in this account's private home, never the repository; grant only necessary OCI permissions and review plans before applying. Pi can execute shell commands as this account without an approval boundary.
 
-HTTPS egress supports Tailscale DERP relays without public ingress; connections may be relayed. UDP/direct connectivity is not configured. Keep OCI Bastion for recovery.
+The instance NSG allows outbound UDP 3478/41641 and HTTPS 443 for Tailscale DERP fallback. No public ingress is added; direct connections are not guaranteed. Keep OCI Bastion for recovery.
 
 Existing VMs do not rerun cloud-init when metadata changes. Copy `scripts/setup-agents.sh` to each VM through Bastion and run `sudo bash setup-agents.sh hub` on ARM or `sudo bash setup-agents.sh worker` on each micro, then enroll. Copy `scripts/configure-herdr-workers.sh` to A1, install it with `sudo install -m 0755 configure-herdr-workers.sh /usr/local/bin/configure-herdr-workers`, and run `configure-herdr-workers` as `agent`. Do not replace VMs just to install these tools.
 

@@ -15,6 +15,7 @@ packages:
   - ca-certificates
   - curl
   - golang-go
+  - tmux
 write_files:
   - path: /usr/local/sbin/setup-agents
     owner: root:root
@@ -38,6 +39,8 @@ runcmd:
     echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" > /etc/apt/sources.list.d/github-cli.list
     curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
     chmod a+r /etc/apt/keyrings/docker.asc
+    curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/noble.noarmor.gpg -o /usr/share/keyrings/tailscale-archive-keyring.gpg
+    curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/noble.tailscale-keyring.list -o /etc/apt/sources.list.d/tailscale.list
     cat > /etc/apt/sources.list.d/docker.sources <<'EOF'
     Types: deb
     URIs: https://download.docker.com/linux/ubuntu
@@ -47,7 +50,7 @@ runcmd:
     Signed-By: /etc/apt/keyrings/docker.asc
     EOF
     apt-get update
-    DEBIAN_FRONTEND=noninteractive apt-get install -y gh terraform docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+    DEBIAN_FRONTEND=noninteractive apt-get install -y gh terraform docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin tailscale
     curl -fsSL "https://github.com/gruntwork-io/terragrunt/releases/latest/download/terragrunt_linux_$(dpkg --print-architecture)" -o /usr/local/bin/terragrunt
     chmod 0755 /usr/local/bin/terragrunt
     systemctl enable --now docker.service
