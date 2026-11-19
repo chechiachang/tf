@@ -18,6 +18,7 @@ resource "oci_identity_user" "agent" {
   compartment_id = var.tenancy_ocid
   name           = "tf-plan-agent"
   description    = "Read-only Terraform planning identity; no console password."
+  email          = var.email
 }
 
 resource "oci_identity_user_capabilities_management" "agent" {

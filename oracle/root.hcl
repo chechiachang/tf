@@ -9,6 +9,9 @@ locals {
   terraform_state_bucket  = "chechia-terraform-state"
   # From [tf] tenancy in ~/.oci/config.
   tenancy_ocid = "ocid1.tenancy.oc1..aaaaaaaaxe5s4joljofgqupzjpjy6rue2q7agaj4qx2y3jcfs3qm6m5e7nwq"
+  # Existing dev compartment from the network stack.
+  compartment_ocid = "ocid1.compartment.oc1..aaaaaaaahoefuycsczfpuwkqqi7qq45wcmooipnrnbm2lseqnrowczbtb4ha"
+  agent_email      = "agent@chechia.net"
 }
 
 remote_state {

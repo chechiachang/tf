@@ -48,11 +48,10 @@ test ! -e ~/.oci/tf-agent.pem && test ! -e ~/.oci/tf-agent-public.pem &&
   openssl pkey -in ~/.oci/tf-agent.pem -pubout -out ~/.oci/tf-agent-public.pem
 ```
 
-Only the public PEM goes to the administrator; never transfer the private key or a session archive. With existing administrator authentication and the public PEM available on the administrator host:
+Only the public PEM goes to the administrator; never transfer the private key or a session archive. The dev compartment OCID and agent's primary email are configured in `root.hcl`. With existing administrator authentication and the public PEM available on the administrator host:
 
 ```sh
 export OCI_TF_PROFILE=tf-admin OCI_TF_AUTH=SecurityToken
-export OCI_AGENT_COMPARTMENT_OCID=<existing-dev-compartment-ocid>
 export OCI_AGENT_PUBLIC_KEY_FILE=<path-to-public-pem>
 cd bootstrap/agent
 terragrunt hcl fmt

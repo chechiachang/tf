@@ -23,6 +23,11 @@ variable "bucket_name" {
   type = string
 }
 
+variable "email" {
+  description = "Primary email required by the OCI identity domain."
+  type        = string
+}
+
 variable "public_key" {
   description = "RSA public key PEM generated outside Terraform. Never supply a private key."
   type        = string
