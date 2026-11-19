@@ -21,6 +21,11 @@ write_files:
     permissions: '0700'
     encoding: b64
     content: ${agent_setup}
+  - path: /usr/local/bin/configure-herdr-workers
+    owner: root:root
+    permissions: '0755'
+    encoding: b64
+    content: ${herdr_workers_setup}
 runcmd:
   - |
     set -eu

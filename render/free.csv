@@ -1,0 +1,2 @@
+free_period,category,service,free_allowance,description,source_url,checked_on
+Recurring Free,Compute and hosting,Render web services,750 running instance-hours/workspace/month,Sleeps after 15 minutes idle; ephemeral filesystem; no free background workers. Free Postgres expires after 30 days and is excluded. Catalog only.,https://render.com/docs/free,2026-11-15

@@ -1,0 +1,2 @@
+free_period,category,service,free_allowance,description,source_url,checked_on
+Recurring Free,"Databases, storage, and messaging",MongoDB Atlas M0,512 MB storage; up to 100 operations/second,Free-forever shared cluster; no backups. Restrict database network allowlist. Catalog only.,https://www.mongodb.com/pricing,2026-11-15

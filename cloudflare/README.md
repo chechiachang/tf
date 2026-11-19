@@ -1,5 +1,7 @@
 # Cloudflare
 
+[Free serverless](dev/global/free/serverless/README.md): Worker compute, D1 SQL, and KV storage, with public endpoints disabled. [Free-service limits](free.csv).
+
 State: existing OCI `chechia-terraform-state`, profile `tf`; keys `cloudflare/<stack>/terraform.tfstate`. No R2 state credentials.
 
 From repo root:

@@ -49,7 +49,7 @@ ssh:
 	(cd "$(INSTANCE_DIR)" && terragrunt run -- init -input=false); \
 	private_ips=$$(cd "$(INSTANCE_DIR)" && terragrunt output -json private_ips); \
 	ip=$$(python3 -c 'import json,sys; print(json.load(sys.stdin)[$(INSTANCE_INDEX)])' <<< "$$private_ips"); \
-	ssh-add "$(SSH_KEY)"; \
+	if ! ssh-add -T "$(SSH_KEY).pub" >/dev/null 2>&1; then ssh-add "$(SSH_KEY)"; fi; \
 	session=$$($(OCI) bastion session create-port-forwarding --bastion-id "$$bastion" --target-private-ip "$$ip" --target-port 22 --ssh-public-key-file "$(SSH_KEY).pub" --session-ttl 3600 --query data.id --raw-output); \
 	socket="/tmp/oci-bastion-$$$$.sock"; \
 	trap 'ssh -S "$$socket" -O exit "$$session@$(BASTION_HOST)" >/dev/null 2>&1 || true; rm -f "$$socket"; $(OCI) bastion session delete --session-id "$$session" --force >/dev/null 2>&1 || true' EXIT; \
