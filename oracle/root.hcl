@@ -1,6 +1,6 @@
 locals {
-  auth    = "SecurityToken"
-  profile = "tf"
+  auth    = get_env("OCI_TF_AUTH", "SecurityToken")
+  profile = get_env("OCI_TF_PROFILE", "tf")
   ssh_public_keys = join("\n", compact([
     trimspace(file("${get_repo_root()}/oracle/ssh/termius.pub")),
     fileexists("${get_env("HOME")}/.ssh/id_rsa.pub") ? trimspace(file("${get_env("HOME")}/.ssh/id_rsa.pub")) : "",
