@@ -1,8 +1,8 @@
 SHELL := /bin/bash
 
 OCI_REGION ?= ap-osaka-1
-OCI_PROFILE ?= tf
-OCI_AUTH ?= security_token
+OCI_PROFILE ?= $(if $(OCI_TF_PROFILE),$(OCI_TF_PROFILE),tf)
+OCI_AUTH ?= $(if $(filter APIKey,$(OCI_TF_AUTH)),api_key,security_token)
 OCI_BASTION_CLIENT_CIDR ?=
 export OCI_BASTION_CLIENT_CIDR
 SSH_KEY ?= $(HOME)/.ssh/id_rsa
@@ -14,6 +14,7 @@ INSTANCE_DIR ?= dev/$(OCI_REGION)/asre/instance
 BASTION_HOST := host.bastion.$(OCI_REGION).oci.oraclecloud.com
 
 OCI := oci --profile $(OCI_PROFILE) --auth $(OCI_AUTH) --region $(OCI_REGION)
+CHECK_AUTH := $(if $(filter api_key,$(OCI_AUTH)),$(OCI) iam region list >/dev/null,oci session validate --profile $(OCI_PROFILE) --auth $(OCI_AUTH))
 
 .SHELLFLAGS := -eu -o pipefail -c
 
@@ -38,7 +39,7 @@ ssh:
 	@set -euo pipefail; \
 	  export TG_DOWNLOAD_DIR=.terragrunt-cache; \
 	  export OCI_BASTION_CLIENT_CIDR="$$(curl -fsS --max-time 10 https://api.ipify.org)/32"; \
-	  oci session validate --profile $(OCI_PROFILE) --auth $(OCI_AUTH); \
+	  $(CHECK_AUTH); \
 	(cd "$(NETWORK_DIR)" && terragrunt run -- init -input=false); \
 	bastion=$$(cd "$(NETWORK_DIR)" && terragrunt output -raw bastion_ocid); \
 	allowed=$$($(OCI) bastion bastion get --bastion-id "$$bastion" --query 'data."client-cidr-block-allow-list"' --output json); \

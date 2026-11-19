@@ -34,6 +34,58 @@ Firefox needs an accessible graphical desktop; Xvfb alone does not provide remot
 
 The stacks already use the `tf` profile with `SecurityToken`. Validate with `oci session validate --profile tf --auth security_token` before planning. Keep `~/.oci` outside the repository. Do not replace an existing A1 instance just to install these tools.
 
+### Headless API-key planning
+
+`bootstrap/agent` creates a dedicated, console-disabled user for read-only VM/MySQL plans in the existing dev compartment. A small custom IAM module keeps the permissions explicit. It cannot apply, manage IAM/network bootstrap, read bootstrap state, or write state. State contains sensitive data: access is limited to `dev/*` objects in the existing bucket; bucket object names and tenancy image metadata are inspectable.
+
+Generate the RSA key on the agent host, outside Terraform and Git (do not overwrite an existing key):
+
+```sh
+umask 077
+mkdir -p ~/.oci
+test ! -e ~/.oci/tf-agent.pem && test ! -e ~/.oci/tf-agent-public.pem &&
+  openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out ~/.oci/tf-agent.pem &&
+  openssl pkey -in ~/.oci/tf-agent.pem -pubout -out ~/.oci/tf-agent-public.pem
+```
+
+Only the public PEM goes to the administrator; never transfer the private key or a session archive. With existing administrator authentication and the public PEM available on the administrator host:
+
+```sh
+export OCI_TF_PROFILE=tf-admin OCI_TF_AUTH=SecurityToken
+export OCI_AGENT_COMPARTMENT_OCID=<existing-dev-compartment-ocid>
+export OCI_AGENT_PUBLIC_KEY_FILE=<path-to-public-pem>
+cd bootstrap/agent
+terragrunt hcl fmt
+terragrunt run -- validate
+terragrunt run -- plan
+# Administrator reviews and applies separately, then obtains:
+terragrunt output -raw user_ocid
+terragrunt output -raw fingerprint
+```
+
+On the agent host, add a `[tf-agent]` profile to `~/.oci/config` using those outputs:
+
+```ini
+[tf-agent]
+user=<user-ocid>
+fingerprint=<fingerprint>
+tenancy=<tenancy-ocid-from-root.hcl>
+region=ap-osaka-1
+key_file=/absolute/path/to/.oci/tf-agent.pem
+```
+
+```sh
+chmod 600 ~/.oci/config ~/.oci/tf-agent.pem
+export OCI_TF_AUTH=APIKey OCI_TF_PROFILE=tf-agent
+cd dev/ap-osaka-1/asre/instance # or asre/amd or asre/mysql, from oracle/
+terragrunt hcl fmt
+terragrunt run -- init -reconfigure -input=false
+terragrunt run -- validate
+terragrunt run -- plan -lock=false
+```
+
+Read-only credentials cannot create backend locks; do not run these unlocked plans during an apply. Do not save plan files in Git. Provider and backend both use the selected profile; Makefile OCI commands use it too. This identity cannot create Bastion sessions (`make ssh`) or update its allowlist. Do not run `make auth` for an API-key profile. Defaults remain `SecurityToken`/`tf`. Test effective permissions after administrator bootstrap; grants inherited from other policies must also be reviewed. Revoke the registered public key if the host is compromised.
+
 ## 2. Apply networking
 
 Allow your computer's current public IPv4 `/32`, then review and apply the network plan.
