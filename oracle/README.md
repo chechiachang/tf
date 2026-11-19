@@ -6,9 +6,33 @@ Ubuntu 24.04: one ARM instance (100 GB disk) and two AMD micros (50 GB each); pr
 
 Run from `oracle/`; configure `root.hcl` and use `~/.ssh/id_rsa.pub` for instance SSH.
 
+All three VMs receive `ssh/termius.pub` and, when present, the operator's `~/.ssh/id_rsa.pub`. Existing VMs may require adding the Termius key to Ubuntu's `~/.ssh/authorized_keys` through existing SSH access; metadata changes alone do not guarantee guest access. Do not replace VMs just to add a key. SSH remains private through Bastion.
+
 ```sh
 make auth
 ```
+
+### A1 agent host prerequisites
+
+A1 cloud-init installs OCI CLI with pipx. For an existing Ubuntu 24.04 host:
+
+```sh
+sudo apt-get update
+sudo apt-get install -y pipx xdg-utils
+sudo env PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin pipx install oci-cli
+oci --version
+```
+
+The inspected Codex host has Terraform, Terragrunt, Python and `hc`, but lacks OCI CLI, pipx, a browser, `xdg-open`, and a graphical session. Optional browser packages:
+
+```sh
+sudo apt-get install -y snapd xvfb
+sudo snap install firefox
+```
+
+Firefox needs an accessible graphical desktop; Xvfb alone does not provide remote viewing. Codex browser-control tools are supplied by the agent environment, not apt. Use a host browser you can control remotely to complete `make auth` and MFA; iPhone Safari cannot deliver a localhost callback to the host. Herdr terminal access alone is not browser access.
+
+The stacks already use the `tf` profile with `SecurityToken`. Validate with `oci session validate --profile tf --auth security_token` before planning. Keep `~/.oci` outside the repository. Do not replace an existing A1 instance just to install these tools.
 
 ## 2. Apply networking
 
