@@ -122,7 +122,7 @@ Merge these rules into your tailnet policy, replacing the login placeholder. Rem
       "action": "check",
       "src": ["group:operators"],
       "dst": ["tag:pi-hub", "tag:pi-worker"],
-      "users": ["agent"]
+      "users": ["agent", "ubuntu"]
     },
     {
       "action": "accept",

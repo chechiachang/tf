@@ -26,6 +26,8 @@ device_tags = {
 
 ## Import and apply
 
+Operators can SSH as `agent` or `ubuntu` on tagged hubs/workers, with Tailscale's interactive identity check: `ssh ubuntu@pi-hub` (or `pi-worker1` / `pi-worker2`). Hub-to-worker automation remains `agent` only; root login is not granted.
+
 Run from `tailscale/dev/global/tailnet/`:
 
 ```sh

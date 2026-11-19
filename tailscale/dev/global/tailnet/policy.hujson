@@ -23,7 +23,7 @@
       "action": "check",
       "src": ["group:operators"],
       "dst": ["tag:pi-hub", "tag:pi-worker"],
-      "users": ["agent"]
+      "users": ["agent", "ubuntu"]
     },
     {
       "action": "accept",
