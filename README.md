@@ -1,5 +1,9 @@
 # Terraform Live
 
+Recurring free allowances and official sources live in each provider's `free.csv`: [OCI](oracle/free.csv), [Cloudflare](cloudflare/free.csv), [GCP](gcp/free.csv), [AWS](aws/free.csv), [Azure](azure/free.csv), [GitHub](github/free.csv), [Render](render/free.csv), [Neon](neon/free.csv), [Supabase](supabase/free.csv), [MongoDB](mongodb/free.csv), [Upstash](upstash/free.csv), [Grafana](grafana/free.csv), and [Tailscale](tailscale/free.csv). Paid overages and add-ons can cost extra; trial credits are excluded.
+
+Ready-to-plan stacks: OCI VMs, Cloudflare R2, and [Workers + D1 + KV](cloudflare/dev/global/free/serverless/README.md). Other CSV entries are catalog-only.
+
 Use Terragrunt for all stack operations. Stacks live in `<cloud>/<environment>/<region>/`; OCI is in `oracle/`, and Azure is a submodule at `azure/`.
 
 ## OCI authentication and workflow
@@ -23,4 +27,4 @@ git submodule update --init --recursive
 
 ## Cloudflare
 
-The `cloudflare/dev/global/asre/share` Terragrunt stack provisions the private `tf-asre-share` R2 bucket and one-day lifecycle expiry for abot's direct uploads. No Worker or public bucket access is provisioned. See the [stack README](cloudflare/dev/global/asre/share/README.md) for S3 credential handling and least-privilege guidance. Keep presigned GET URLs shorter-lived than object retention; treat the URLs as bearer credentials.
+The `cloudflare/dev/global/abot/share` Terragrunt stack provisions the private `abot-share` R2 bucket with 90-day lifecycle expiry. See the [stack README](cloudflare/dev/global/abot/share/README.md) for S3 credential handling. The separate free serverless stack provisions a Worker, D1 database, and KV namespace without public routes.
