@@ -16,6 +16,7 @@ packages:
   - curl
   - golang-go
   - npm
+  - tmux
 runcmd:
   - |
     set -eu
@@ -28,6 +29,8 @@ runcmd:
     echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" > /etc/apt/sources.list.d/github-cli.list
     curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
     chmod a+r /etc/apt/keyrings/docker.asc
+    curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/noble.noarmor.gpg -o /usr/share/keyrings/tailscale-archive-keyring.gpg
+    curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/noble.tailscale-keyring.list -o /etc/apt/sources.list.d/tailscale.list
     cat > /etc/apt/sources.list.d/docker.sources <<'EOF'
     Types: deb
     URIs: https://download.docker.com/linux/ubuntu
@@ -37,7 +40,20 @@ runcmd:
     Signed-By: /etc/apt/keyrings/docker.asc
     EOF
     apt-get update
-    DEBIAN_FRONTEND=noninteractive apt-get install -y gh terraform docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+    DEBIAN_FRONTEND=noninteractive apt-get install -y gh terraform docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin tailscale
     curl -fsSL "https://github.com/gruntwork-io/terragrunt/releases/latest/download/terragrunt_linux_$(dpkg --print-architecture)" -o /usr/local/bin/terragrunt
     chmod 0755 /usr/local/bin/terragrunt
     systemctl enable --now docker.service
+    agent_tmp="$(mktemp -d)"
+    trap 'rm -f "$agent_tmp/herdr" "$agent_tmp/opencode.tar.gz" "$agent_tmp/opencode"; rmdir "$agent_tmp"' EXIT
+    curl -fsSL https://github.com/herdrdev/herdr/releases/download/v0.9.5/herdr-linux-aarch64 -o "$agent_tmp/herdr"
+    echo "17d7536f2da50859523680ef279dffcac8e4a235f4e46fe8da6c2ec44141897c  $agent_tmp/herdr" | sha256sum -c -
+    install -m 0755 "$agent_tmp/herdr" /usr/local/bin/herdr
+    curl -fsSL https://github.com/anomalyco/opencode/releases/download/v1.19.5/opencode-linux-arm64.tar.gz -o "$agent_tmp/opencode.tar.gz"
+    echo "fae5be262d693b7c5e562856cc473e59e741772936db0c0600ac0d5ed5bd088b  $agent_tmp/opencode.tar.gz" | sha256sum -c -
+    tar -xzf "$agent_tmp/opencode.tar.gz" -C "$agent_tmp" opencode
+    install -m 0755 "$agent_tmp/opencode" /usr/local/bin/opencode
+    install -d -m 0755 -o ubuntu -g ubuntu /home/ubuntu/.config /home/ubuntu/.config/opencode /home/ubuntu/.config/opencode/skills /home/ubuntu/.config/opencode/skills/herdr
+    herdr --skill > /home/ubuntu/.config/opencode/skills/herdr/SKILL.md
+    chown ubuntu:ubuntu /home/ubuntu/.config/opencode/skills/herdr/SKILL.md
+    sudo -u ubuntu -H herdr integration install opencode
