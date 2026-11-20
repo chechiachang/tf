@@ -33,7 +33,7 @@ resource "oci_identity_user_capabilities_management" "agent" {
 resource "oci_identity_group" "agent" {
   compartment_id = var.tenancy_ocid
   name           = "tf-plan-agents"
-  description    = "Read-only dev infrastructure and state access."
+  description    = "Read-only dev infrastructure and Cloudflare state access."
 }
 
 resource "oci_identity_user_group_membership" "agent" {
@@ -49,7 +49,7 @@ resource "oci_identity_api_key" "agent" {
 resource "oci_identity_policy" "agent" {
   compartment_id = var.tenancy_ocid
   name           = "tf-plan-agent"
-  description    = "Plan dev stacks without mutation or bootstrap-state access."
+  description    = "Plan dev and Cloudflare stacks without mutation or bootstrap-state access."
   statements = [
     "Allow group id ${oci_identity_group.agent.id} to read instance-family in compartment id ${var.compartment_ocid}",
     "Allow group id ${oci_identity_group.agent.id} to read volume-family in compartment id ${var.compartment_ocid}",
@@ -61,6 +61,8 @@ resource "oci_identity_policy" "agent" {
     "Allow group id ${oci_identity_group.agent.id} to read buckets in tenancy where target.bucket.name = '${var.bucket_name}'",
     "Allow group id ${oci_identity_group.agent.id} to inspect objects in tenancy where target.bucket.name = '${var.bucket_name}'",
     "Allow group id ${oci_identity_group.agent.id} to read objects in tenancy where all {target.bucket.name = '${var.bucket_name}', target.object.name = 'dev/*'}",
+    "Allow group id ${oci_identity_group.agent.id} to read objects in tenancy where all {target.bucket.name = '${var.bucket_name}', target.object.name = 'cloudflare/dev/global/abot/share/terraform.tfstate'}",
+    "Allow group id ${oci_identity_group.agent.id} to read objects in tenancy where all {target.bucket.name = '${var.bucket_name}', target.object.name = 'cloudflare/dev/global/free/serverless/terraform.tfstate'}",
   ]
 }
 

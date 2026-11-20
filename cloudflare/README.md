@@ -23,4 +23,22 @@ Review before apply. Refresh OAuth by unsetting and exporting the token again. E
 
 CI: dispatch `Cloudflare Terragrunt` on `main`; apply requires `APPLY` and configured `cloudflare-production` environment approvals. Set environment variables `OCI_TENANCY_OCID`, `OCI_SESSION_FINGERPRINT` and secrets `OCI_SESSION_PRIVATE_KEY`, `OCI_SESSION_TOKEN`, `CLOUDFLARE_API_TOKEN`. Supply a fresh OCI session token and its matching PEM private key/fingerprint before dispatch; the workflow cannot refresh the session. Plan artifacts contain state data; restrict access.
 
-Agent CLI without browser login: [Terraform-managed plan/apply token](bootstrap/agent/README.md). Bootstrap uses a separate token-management credential; the generated secret is stored in OCI state. Existing Wrangler auth remains supported.
+## Remote agent
+
+Wrangler 4.165.0 supports device login: approve the displayed URL/code on your phone; no callback tunnel or session upload. A separate Cloudflare token bootstrap is not needed for these stacks.
+
+```sh
+unset CLOUDFLARE_API_TOKEN CLOUDFLARE_API_KEY CLOUDFLARE_EMAIL
+npx wrangler@4.165.0 login --device
+export CLOUDFLARE_API_TOKEN="$(npx wrangler@4.165.0 auth token --json | jq -er '.token')"
+export OCI_TF_AUTH=APIKey OCI_TF_PROFILE=tf-provision
+cd cloudflare/dev/global/abot/share
+terragrunt hcl fmt
+terragrunt run -- init -input=false
+terragrunt run -- validate
+terragrunt run -- plan -input=false -lock=false
+```
+
+Disable shell tracing before handling credentials. Wrangler stores OAuth credentials locally, outside Terraform state; do not print or commit them. Re-export after refresh. Default OAuth scopes are broader than a custom minimal token; they are user/account-authorized, not stack-scoped.
+
+The OCI planning identity grants read access to the exact state keys for `abot/share` and `free/serverless`, not bootstrap state. Apply the reviewed OCI identity-policy update with an authorized administrator before retrying plans. This identity cannot write state or locks: use `-lock=false` for plans only; applies require separate state-write/lock credentials and review. Existing `make -C oracle auth` remains supported.
