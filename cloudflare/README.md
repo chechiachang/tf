@@ -23,4 +23,4 @@ Review before apply. Refresh OAuth by unsetting and exporting the token again. E
 
 CI: dispatch `Cloudflare Terragrunt` on `main`; apply requires `APPLY` and configured `cloudflare-production` environment approvals. Set environment variables `OCI_TENANCY_OCID`, `OCI_SESSION_FINGERPRINT` and secrets `OCI_SESSION_PRIVATE_KEY`, `OCI_SESSION_TOKEN`, `CLOUDFLARE_API_TOKEN`. Supply a fresh OCI session token and its matching PEM private key/fingerprint before dispatch; the workflow cannot refresh the session. Plan artifacts contain state data; restrict access.
 
-Agent CLI without browser login: [Terraform-managed read-only token](bootstrap/agent/README.md). Bootstrap uses a separate token-management credential; the generated secret is stored in OCI state. Existing Wrangler auth remains supported.
+Agent CLI without browser login: [Terraform-managed plan/apply token](bootstrap/agent/README.md). Bootstrap uses a separate token-management credential; the generated secret is stored in OCI state. Existing Wrangler auth remains supported.
