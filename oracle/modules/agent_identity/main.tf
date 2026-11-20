@@ -73,3 +73,23 @@ output "user_ocid" {
 output "fingerprint" {
   value = oci_identity_api_key.agent.fingerprint
 }
+
+resource "oci_identity_dynamic_group" "a1" {
+  count          = var.instance_ocid == null ? 0 : 1
+  compartment_id = var.tenancy_ocid
+  name           = "tf-plan-a1"
+  description    = "Exact A1 agent host; no compartment-wide membership."
+  matching_rule  = "ALL {instance.id = '${var.instance_ocid}', instance.compartment.id = '${var.compartment_ocid}'}"
+}
+
+resource "oci_identity_policy" "a1" {
+  count          = var.instance_ocid == null ? 0 : 1
+  compartment_id = var.tenancy_ocid
+  name           = "tf-plan-a1"
+  description    = "A1 read-only planning; no IAM administration, state writes, or bootstrap reads."
+  statements = [for statement in oci_identity_policy.agent.statements : replace(
+    statement,
+    "group id ${oci_identity_group.agent.id}",
+    "dynamic-group id ${oci_identity_dynamic_group.a1[0].id}"
+  )]
+}

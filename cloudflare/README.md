@@ -31,7 +31,7 @@ Wrangler 4.165.0 supports device login: approve the displayed URL/code on your p
 unset CLOUDFLARE_API_TOKEN CLOUDFLARE_API_KEY CLOUDFLARE_EMAIL
 npx wrangler@4.165.0 login --device
 export CLOUDFLARE_API_TOKEN="$(npx wrangler@4.165.0 auth token --json | jq -er '.token')"
-export OCI_TF_AUTH=APIKey OCI_TF_PROFILE=tf-provision
+export OCI_TF_AUTH=InstancePrincipal # on the configured A1 VM after IAM bootstrap
 cd cloudflare/dev/global/abot/share
 terragrunt hcl fmt
 terragrunt run -- init -input=false
@@ -41,4 +41,4 @@ terragrunt run -- plan -input=false -lock=false
 
 Disable shell tracing before handling credentials. Wrangler stores OAuth credentials locally, outside Terraform state; do not print or commit them. Re-export after refresh. Default OAuth scopes are broader than a custom minimal token; they are user/account-authorized, not stack-scoped.
 
-The OCI planning identity grants read access to the exact state keys for `abot/share` and `free/serverless`, not bootstrap state. Apply the reviewed OCI identity-policy update with an authorized administrator before retrying plans. This identity cannot write state or locks: use `-lock=false` for plans only; applies require separate state-write/lock credentials and review. Existing `make -C oracle auth` remains supported.
+The OCI planning identities (API-key fallback and exact-VM Instance Principal) grant read access to the exact state keys for `abot/share` and `free/serverless`, not bootstrap state. Apply the reviewed OCI identity-policy update with an authorized administrator before retrying plans. These identities cannot write state or locks: use `-lock=false` for plans only; applies require separate state-write/lock credentials and review. Existing `make -C oracle auth` remains supported.

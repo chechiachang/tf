@@ -34,9 +34,29 @@ Firefox needs an accessible graphical desktop; Xvfb alone does not provide remot
 
 The stacks already use the `tf` profile with `SecurityToken`. Validate with `oci session validate --profile tf --auth security_token` before planning. Keep `~/.oci` outside the repository. Do not replace an existing A1 instance just to install these tools.
 
+### A1 Instance Principal planning
+
+Preferred on the A1 host: `bootstrap/agent` adds a dynamic group matching only `agent_instance_ocid` and the configured dev compartment. Its policy mirrors the API-key planning identity: dev infrastructure reads and exact Cloudflare state reads; no IAM administration, bootstrap-state reads, writes, or locks. Keep the existing API-key identity as a fallback; no key is rotated or removed.
+
+An administrator must review and apply the bootstrap stack first. Then on A1:
+
+```sh
+export OCI_TF_AUTH=InstancePrincipal
+oci --auth instance_principal --region ap-osaka-1 os object get \
+  --namespace-name axyygu1yi2iu --bucket-name chechia-terraform-state \
+  --name cloudflare/dev/global/abot/share/terraform.tfstate --file /dev/null
+# From the desired stack:
+terragrunt hcl fmt
+terragrunt run -- init -input=false
+terragrunt run -- validate
+terragrunt run -- plan -input=false -lock=false
+```
+
+No OCI API key/profile is needed for Instance Principal. Cloudflare still needs Wrangler OAuth. Anyone able to run code on this VM can use its instance identity; it is not Unix-user-scoped. After VM replacement, update the exact OCID and review membership. Allow IAM propagation time before access checks. Applies still need separately authorized state-write/lock credentials. Existing `make auth` and SecurityToken defaults are unchanged; use the explicit CLI command above for Instance Principal.
+
 ### Headless API-key planning
 
-`bootstrap/agent` creates a dedicated, console-disabled user for read-only VM/MySQL plans in the existing dev compartment. A small custom IAM module keeps the permissions explicit. It cannot apply, manage IAM/network bootstrap, read bootstrap state, or write state. State contains sensitive data: access is limited to `dev/*` objects in the existing bucket; bucket object names and tenancy image metadata are inspectable.
+`bootstrap/agent` creates a dedicated, console-disabled user for read-only VM/MySQL plans in the existing dev compartment. A small custom IAM module keeps the permissions explicit. It cannot apply, manage IAM/network bootstrap, read bootstrap state, or write state. State contains sensitive data: access is limited to `dev/*` and the two non-bootstrap Cloudflare state objects in the existing bucket; bucket object names and tenancy image metadata are inspectable.
 
 Generate the RSA key on the agent host, outside Terraform and Git (do not overwrite an existing key):
 

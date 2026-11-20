@@ -15,5 +15,6 @@ inputs = {
   compartment_ocid = include.root.locals.compartment_ocid
   bucket_name      = include.root.locals.terraform_state_bucket
   email            = include.root.locals.agent_email
+  instance_ocid    = include.root.locals.agent_instance_ocid
   public_key       = file(get_env("OCI_AGENT_PUBLIC_KEY_FILE"))
 }

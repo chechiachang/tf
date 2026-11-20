@@ -36,3 +36,14 @@ variable "public_key" {
     error_message = "Supply only an RSA public key PEM, not a private key."
   }
 }
+
+variable "instance_ocid" {
+  description = "Exact A1 agent VM; null leaves Instance Principal disabled."
+  type        = string
+  default     = null
+
+  validation {
+    condition     = var.instance_ocid == null ? true : can(regex("^ocid1[.]instance[.]", var.instance_ocid))
+    error_message = "Supply an OCI instance OCID."
+  }
+}
