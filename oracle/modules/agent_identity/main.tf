@@ -71,6 +71,6 @@ resource "oci_identity_policy" "a1_provision" {
     ], [for key in local.provision_state_keys :
     "Allow dynamic-group id ${oci_identity_dynamic_group.a1[0].id} to {OBJECT_READ, OBJECT_CREATE, OBJECT_OVERWRITE} in tenancy where all {target.bucket.name = '${var.bucket_name}', target.object.name = '${key}'}"
     ], [for key in local.provision_state_keys :
-    "Allow dynamic-group id ${oci_identity_dynamic_group.a1[0].id} to manage objects in tenancy where all {target.bucket.name = '${var.bucket_name}', target.object.name = '${key}.tflock'}"
+    "Allow dynamic-group id ${oci_identity_dynamic_group.a1[0].id} to manage objects in tenancy where all {target.bucket.name = '${var.bucket_name}', target.object.name = '${key}.lock'}"
   ])
 }
