@@ -32,3 +32,12 @@ variable "network_security_group_id" {
   description = "Network security group allowing MySQL only from the application instance group."
   type        = string
 }
+
+variable "bootstrap_db_system_ocid" {
+  description = "Existing DB created by bootstrap-mysql.sh; password never enters Terraform."
+  type        = string
+  validation {
+    condition     = can(regex("^ocid1[.]mysqldbsystem[.]", var.bootstrap_db_system_ocid))
+    error_message = "Run bootstrap-mysql.sh and set OCI_MYSQL_DB_SYSTEM_OCID before planning."
+  }
+}

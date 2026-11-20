@@ -58,7 +58,7 @@ No OCI API key/profile is needed. Cloudflare still needs Wrangler OAuth. Any cod
 
 ### MySQL credentials and boot disks
 
-The OCI MySQL provider has no write-only password argument. The generated administrator password remains in Terraform state; sensitive output is not state encryption. Keep MySQL state administrator-only. Avoiding it entirely requires moving credential provisioning/rotation outside Terraform and deliberately migrating existing state; simply removing the output does not erase current or historical secrets. Rotate any credential previously exposed to an untrusted identity.
+MySQL passwords are handled outside Terraform: [Vault/bootstrap workflow](dev/ap-osaka-1/asre/mysql/README.md). Populate Vault manually, run the script with an administrator to create/import the DB, then review the HeatWave plan. No Terraform password resource, password data source, or password output. Existing password-bearing state needs a separate migration; this script refuses it.
 
 Compute instances preserve boot volumes on termination; backup policy remains disabled. Preservation is not a backup, and preserved disks are not automatically attached to replacement VMs. Review replacements, recovery steps, and retained-volume quota/cost separately.
 
