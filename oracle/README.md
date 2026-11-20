@@ -36,9 +36,11 @@ The stacks already use the `tf` profile with `SecurityToken`. Validate with `oci
 
 ### A1 Instance Principal planning
 
-Preferred on the A1 host: `bootstrap/agent` adds a dynamic group matching only `agent_instance_ocid` and the configured dev compartment. Its policy mirrors the API-key planning identity: dev infrastructure reads and exact Cloudflare state reads; no IAM administration, bootstrap-state reads, writes, or locks. Keep the existing API-key identity as a fallback; no key is rotated or removed.
+`bootstrap/agent` matches only `agent_instance_ocid` in the configured dev compartment. Its independent policy allows dev infrastructure reads and exact ARM, AMD, and two Cloudflare state-object reads. No MySQL/network/bootstrap state reads, IAM administration, state writes, or locks. MySQL stack planning needs a separate administrator because its state contains the generated database password.
 
-An administrator must review and apply the bootstrap stack first. Then on A1:
+With administrator credentials, review the bootstrap plan and apply it. This revision removes the unused API-key user, key registration, membership, group, and policy; expect those deletions and the A1 dynamic-group/policy additions. Do not merely remove them from state: that would leave the old credential active. Keep administrator credentials through the migration and verify A1 access afterward. Local private keys/config are not deleted automatically; remove the retired profile/key privately only after successful revocation. Historical state versions can retain old metadata.
+
+On A1 after bootstrap:
 
 ```sh
 export OCI_TF_AUTH=InstancePrincipal
@@ -52,58 +54,13 @@ terragrunt run -- validate
 terragrunt run -- plan -input=false -lock=false
 ```
 
-No OCI API key/profile is needed for Instance Principal. Cloudflare still needs Wrangler OAuth. Anyone able to run code on this VM can use its instance identity; it is not Unix-user-scoped. After VM replacement, update the exact OCID and review membership. Allow IAM propagation time before access checks. Applies still need separately authorized state-write/lock credentials. Existing `make auth` and SecurityToken defaults are unchanged; use the explicit CLI command above for Instance Principal.
+No OCI API key/profile is needed. Cloudflare still needs Wrangler OAuth. Any code on the VM may use its identity; it is not Unix-user-scoped. Update the exact OCID after VM replacement and allow IAM propagation time. Unlocked plans must not overlap applies. Applies require separate state-write/lock credentials. Existing `make auth` / SecurityToken defaults remain unchanged; use the explicit CLI command above for Instance Principal.
 
-### Headless API-key planning
+### MySQL credentials and boot disks
 
-`bootstrap/agent` creates a dedicated, console-disabled user for read-only VM/MySQL plans in the existing dev compartment. A small custom IAM module keeps the permissions explicit. It cannot apply, manage IAM/network bootstrap, read bootstrap state, or write state. State contains sensitive data: access is limited to `dev/*` and the two non-bootstrap Cloudflare state objects in the existing bucket; bucket object names and tenancy image metadata are inspectable.
+The OCI MySQL provider has no write-only password argument. The generated administrator password remains in Terraform state; sensitive output is not state encryption. Keep MySQL state administrator-only. Avoiding it entirely requires moving credential provisioning/rotation outside Terraform and deliberately migrating existing state; simply removing the output does not erase current or historical secrets. Rotate any credential previously exposed to an untrusted identity.
 
-Generate the RSA key on the agent host, outside Terraform and Git (do not overwrite an existing key):
-
-```sh
-umask 077
-mkdir -p ~/.oci
-test ! -e ~/.oci/tf-agent.pem && test ! -e ~/.oci/tf-agent-public.pem &&
-  openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out ~/.oci/tf-agent.pem &&
-  openssl pkey -in ~/.oci/tf-agent.pem -pubout -out ~/.oci/tf-agent-public.pem
-```
-
-Only the public PEM goes to the administrator; never transfer the private key or a session archive. The dev compartment OCID and agent's primary email are configured in `root.hcl`. With existing administrator authentication and the public PEM available on the administrator host:
-
-```sh
-export OCI_TF_PROFILE=tf-admin OCI_TF_AUTH=SecurityToken
-export OCI_AGENT_PUBLIC_KEY_FILE=<path-to-public-pem>
-cd bootstrap/agent
-terragrunt hcl fmt
-terragrunt run -- validate
-terragrunt run -- plan
-# Administrator reviews and applies separately, then obtains:
-terragrunt output -raw user_ocid
-terragrunt output -raw fingerprint
-```
-
-On the agent host, add a `[tf-agent]` profile to `~/.oci/config` using those outputs:
-
-```ini
-[tf-agent]
-user=<user-ocid>
-fingerprint=<fingerprint>
-tenancy=<tenancy-ocid-from-root.hcl>
-region=ap-osaka-1
-key_file=/absolute/path/to/.oci/tf-agent.pem
-```
-
-```sh
-chmod 600 ~/.oci/config ~/.oci/tf-agent.pem
-export OCI_TF_AUTH=APIKey OCI_TF_PROFILE=tf-agent
-cd dev/ap-osaka-1/asre/instance # or asre/amd or asre/mysql, from oracle/
-terragrunt hcl fmt
-terragrunt run -- init -reconfigure -input=false
-terragrunt run -- validate
-terragrunt run -- plan -lock=false
-```
-
-Read-only credentials cannot create backend locks; do not run these unlocked plans during an apply. Do not save plan files in Git. Provider and backend both use the selected profile; Makefile OCI commands use it too. This identity cannot create Bastion sessions (`make ssh`) or update its allowlist. Do not run `make auth` for an API-key profile. Defaults remain `SecurityToken`/`tf`. Test effective permissions after administrator bootstrap; grants inherited from other policies must also be reviewed. Revoke the registered public key if the host is compromised.
+Compute instances preserve boot volumes on termination; backup policy remains disabled. Preservation is not a backup, and preserved disks are not automatically attached to replacement VMs. Review replacements, recovery steps, and retained-volume quota/cost separately.
 
 ## 2. Apply networking
 
