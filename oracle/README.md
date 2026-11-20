@@ -36,25 +36,29 @@ The stacks already use the `tf` profile with `SecurityToken`. Validate with `oci
 
 ### A1 Instance Principal planning
 
-`bootstrap/agent` matches only `agent_instance_ocid` in the configured dev compartment. Its independent policy allows dev infrastructure reads and exact ARM, AMD, and two Cloudflare state-object reads. No MySQL/network/bootstrap state reads, IAM administration, state writes, or locks. MySQL stack planning needs a separate administrator because its state contains the generated database password.
+`bootstrap/agent` matches only `agent_instance_ocid` in the dev compartment. It creates separate planning and permanent MySQL/Vault provisioning policies. No IAM administration, compute mutation, or general network management. Network use grants are limited to subnets/NSGs needed by MySQL.
 
-With administrator credentials, review the bootstrap plan and apply it. This revision removes the unused API-key user, key registration, membership, group, and policy; expect those deletions and the A1 dynamic-group/policy additions. Do not merely remove them from state: that would leave the old credential active. Keep administrator credentials through the migration and verify A1 access afterward. Local private keys/config are not deleted automatically; remove the retired profile/key privately only after successful revocation. Historical state versions can retain old metadata.
+The provisioner can manage MySQL/HeatWave in dev; create/read/update Vaults and keys in dev (not delete/export/decrypt keys); read the `asre-mysql-admin` secret and bundles in dev; read network state; and read/create/overwrite four exact MySQL/Vault/Cloudflare state objects plus manage their lock objects. State-object deletion is excluded. Vault/key creation must be compartment-scoped before their OCIDs exist; it is not restricted to one vault. MySQL grants include deletion outside Terraform. The named-secret grant is not an immutable secret-ID pin: the bootstrap verifies the expected vault/key/compartment.
 
-On A1 after bootstrap:
+An administrator must review/apply IAM first. The plan removes the unused API-key identity resources; keep administrator credentials through the migration. Do not merely remove them from state and leave a live key. Clean up retired local profiles/keys privately after revocation; no local files are removed automatically.
+
+Then on A1:
 
 ```sh
 export OCI_TF_AUTH=InstancePrincipal
+export OCI_BASTION_CLIENT_CIDR="$(curl -fsS --max-time 15 https://api.ipify.org)/32"
 oci --auth instance_principal --region ap-osaka-1 os object get \
   --namespace-name axyygu1yi2iu --bucket-name chechia-terraform-state \
   --name cloudflare/dev/global/abot/share/terraform.tfstate --file /dev/null
-# From the desired stack:
+# From mysql-vault or a Cloudflare stack:
 terragrunt hcl fmt
 terragrunt run -- init -input=false
 terragrunt run -- validate
-terragrunt run -- plan -input=false -lock=false
+terragrunt run -- plan -input=false
+# Review before apply. See the MySQL bootstrap workflow below.
 ```
 
-No OCI API key/profile is needed. Cloudflare still needs Wrangler OAuth. Any code on the VM may use its identity; it is not Unix-user-scoped. Update the exact OCID after VM replacement and allow IAM propagation time. Unlocked plans must not overlap applies. Applies require separate state-write/lock credentials. Existing `make auth` / SecurityToken defaults remain unchanged; use the explicit CLI command above for Instance Principal.
+The CIDR lets network config parse for output reads; do not apply network changes. No OCI API key/profile is required. Cloudflare still needs Wrangler OAuth. All code on A1 may exercise permanent resource/state/secret privileges; it is not Unix-user-scoped. Avoid unrelated/untrusted workloads. Update the exact OCID after VM replacement and verify effective grants after IAM propagation. IAM bootstrap/state and compute writes remain administrator-only. Existing `make auth`/SecurityToken defaults are unchanged.
 
 ### MySQL credentials and boot disks
 

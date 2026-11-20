@@ -43,3 +43,34 @@ resource "oci_identity_policy" "a1" {
     "Allow dynamic-group id ${oci_identity_dynamic_group.a1[0].id} to read objects in tenancy where all {target.bucket.name = '${var.bucket_name}', target.object.name = 'cloudflare/dev/global/free/serverless/terraform.tfstate'}",
   ]
 }
+
+locals {
+  provision_state_keys = [
+    "dev/ap-osaka-1/asre/mysql-vault/terraform.tfstate",
+    "dev/ap-osaka-1/asre/mysql/terraform.tfstate",
+    "cloudflare/dev/global/abot/share/terraform.tfstate",
+    "cloudflare/dev/global/free/serverless/terraform.tfstate",
+  ]
+}
+
+resource "oci_identity_policy" "a1_provision" {
+  count          = var.instance_ocid == null ? 0 : 1
+  compartment_id = var.tenancy_ocid
+  name           = "tf-provision-a1"
+  description    = "Permanent MySQL/Vault provisioner; no IAM or compute administration."
+  statements = concat([
+    "Allow dynamic-group id ${oci_identity_dynamic_group.a1[0].id} to manage mysql-family in compartment id ${var.compartment_ocid}",
+    "Allow dynamic-group id ${oci_identity_dynamic_group.a1[0].id} to use subnets in compartment id ${var.compartment_ocid}",
+    "Allow dynamic-group id ${oci_identity_dynamic_group.a1[0].id} to use network-security-groups in compartment id ${var.compartment_ocid}",
+    "Allow dynamic-group id ${oci_identity_dynamic_group.a1[0].id} to {VAULT_INSPECT, VAULT_READ, VAULT_CREATE, VAULT_UPDATE, VAULT_CREATE_KEY} in compartment id ${var.compartment_ocid}",
+    "Allow dynamic-group id ${oci_identity_dynamic_group.a1[0].id} to {KEY_INSPECT, KEY_READ, KEY_CREATE, KEY_UPDATE} in compartment id ${var.compartment_ocid}",
+    "Allow dynamic-group id ${oci_identity_dynamic_group.a1[0].id} to read secrets in compartment id ${var.compartment_ocid} where target.secret.name = 'asre-mysql-admin'",
+    "Allow dynamic-group id ${oci_identity_dynamic_group.a1[0].id} to read secret-bundles in compartment id ${var.compartment_ocid} where target.secret.name = 'asre-mysql-admin'",
+    "Allow dynamic-group id ${oci_identity_dynamic_group.a1[0].id} to read objects in tenancy where all {target.bucket.name = '${var.bucket_name}', target.object.name = 'dev/ap-osaka-1/network/terraform.tfstate'}",
+    "Allow dynamic-group id ${oci_identity_dynamic_group.a1[0].id} to manage objects in tenancy where all {target.bucket.name = '${var.bucket_name}', target.object.name = 'dev/ap-osaka-1/asre/mysql/bootstrap.lock'}",
+    ], [for key in local.provision_state_keys :
+    "Allow dynamic-group id ${oci_identity_dynamic_group.a1[0].id} to {OBJECT_READ, OBJECT_CREATE, OBJECT_OVERWRITE} in tenancy where all {target.bucket.name = '${var.bucket_name}', target.object.name = '${key}'}"
+    ], [for key in local.provision_state_keys :
+    "Allow dynamic-group id ${oci_identity_dynamic_group.a1[0].id} to manage objects in tenancy where all {target.bucket.name = '${var.bucket_name}', target.object.name = '${key}.tflock'}"
+  ])
+}

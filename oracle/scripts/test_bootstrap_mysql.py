@@ -40,6 +40,8 @@ class BootstrapTests(unittest.TestCase):
                 if "pull" in args:
                     return json.dumps({"resources": [{"instances": [{"attributes": {"admin_password": None}}]}]})
                 return ""
+            if "raw-request" in args:
+                return json.dumps({"status": "200 OK", "headers": {"etag": "lock-etag"}})
             if "secret-bundle" in args:
                 data = {"secret-bundle-content": {"content": base64.b64encode(password.encode()).decode()}}
             elif "secret" in args:
@@ -66,6 +68,43 @@ class BootstrapTests(unittest.TestCase):
             self.assertNotIn(password, " ".join(args))
             if args[0] == "terragrunt":
                 self.assertIsNone(payload)
+
+    def test_lock_is_atomic_and_release_checks_etag(self):
+        calls = []
+        def api(*args):
+            calls.append(args)
+            return {"status": "200 OK", "headers": {"ETag": "owner-etag"}}
+        with b.remote_lock(api):
+            pass
+        acquire = json.loads(calls[0][calls[0].index("--request-headers") + 1])
+        release = json.loads(calls[1][calls[1].index("--request-headers") + 1])
+        self.assertEqual(acquire, {"If-None-Match": "*"})
+        self.assertEqual(release, {"If-Match": "owner-etag"})
+        with self.assertRaises(RuntimeError):
+            with b.remote_lock(lambda *args: {"status": "412 Precondition Failed"}):
+                self.fail("A held lock must not allow bootstrap")
+
+    def test_outputs_only_legacy_state_blocks_creation(self):
+        calls = []
+        def fake_run(args, stage, cwd=None, payload=None):
+            calls.append(args)
+            if args[0] == "terragrunt" and "output" in args:
+                values = ({"vault_id": "vault", "key_id": "key"} if "mysql-vault" in str(cwd)
+                          else {"compartment_ocid": "comp", "subnet_ocids": {"database": "sub"},
+                                "database_nsg_ocid": "nsg"})
+                return json.dumps({k: {"value": v} for k, v in values.items()})
+            if args[0] == "oci":
+                return json.dumps({"data": {"vault-id": "vault", "key-id": "key", "compartment-id": "comp"}})
+            return ""
+        snapshot = subprocess.CompletedProcess([], 0, json.dumps({"outputs": {"admin_password": {"value": "old"}}}), "")
+        with patch.object(b, "remote_lock", return_value=contextlib.nullcontext()), \
+             patch.object(b, "run", side_effect=fake_run), \
+             patch.object(b.subprocess, "run", return_value=snapshot), \
+             patch.dict(os.environ, {"OCI_TF_AUTH": "APIKey"}, clear=True), \
+             patch("sys.argv", ["bootstrap", "--secret-id", "secret", "--create"]):
+            with self.assertRaisesRegex(RuntimeError, "Legacy password output"):
+                b.main()
+        self.assertFalse(any("create" in args for args in calls))
 
     def test_cli_error_does_not_expose_payload(self):
         result = subprocess.CompletedProcess([], 1, "secret response", "secret diagnostics")

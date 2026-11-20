@@ -10,6 +10,15 @@ permissions:
   contents: read
 
 jobs:
+  bootstrap-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check secret-safe MySQL bootstrap
+        run: |
+          bash -n oracle/scripts/bootstrap-mysql.sh
+          PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s oracle/scripts -p test_bootstrap_mysql.py
+
   discover:
     name: Find Terraform roots
     runs-on: ubuntu-latest
