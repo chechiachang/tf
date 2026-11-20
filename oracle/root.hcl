@@ -11,7 +11,8 @@ locals {
   tenancy_ocid = "ocid1.tenancy.oc1..aaaaaaaaxe5s4joljofgqupzjpjy6rue2q7agaj4qx2y3jcfs3qm6m5e7nwq"
   # Existing dev compartment from the network stack.
   compartment_ocid = "ocid1.compartment.oc1..aaaaaaaahoefuycsczfpuwkqqi7qq45wcmooipnrnbm2lseqnrowczbtb4ha"
-  agent_email      = "agent@chechia.net"
+  # Exact existing A1 host; update after a reviewed VM replacement.
+  agent_instance_ocid = "ocid1.instance.oc1.ap-osaka-1.anvwsljrccz4hzacd3lqdxwpde6efwx4vgk3gagsb2zc7o76dupigqwdgklq"
 }
 
 remote_state {

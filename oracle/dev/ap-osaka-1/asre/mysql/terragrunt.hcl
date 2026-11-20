@@ -25,6 +25,7 @@ dependency "network" {
 }
 
 inputs = {
+  bootstrap_db_system_ocid  = get_env("OCI_MYSQL_DB_SYSTEM_OCID", "")
   auth                      = include.root.locals.auth
   region                    = include.region.locals.region
   profile                   = include.root.locals.profile

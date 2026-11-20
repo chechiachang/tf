@@ -19,7 +19,7 @@ module "free_arm_instance" {
   assign_public_ip          = false
   boot_volume_size_in_gbs   = var.boot_volume_size_in_gbs
   boot_volume_backup_policy = "disabled"
-  preserve_boot_volume      = false
+  preserve_boot_volume      = true
 
   cloud_agent_plugins = {
     autonomous_linux        = "DISABLED"

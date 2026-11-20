@@ -34,56 +34,37 @@ Firefox needs an accessible graphical desktop; Xvfb alone does not provide remot
 
 The stacks already use the `tf` profile with `SecurityToken`. Validate with `oci session validate --profile tf --auth security_token` before planning. Keep `~/.oci` outside the repository. Do not replace an existing A1 instance just to install these tools.
 
-### Headless API-key planning
+### A1 Instance Principal planning
 
-`bootstrap/agent` creates a dedicated, console-disabled user for read-only VM/MySQL plans in the existing dev compartment. A small custom IAM module keeps the permissions explicit. It cannot apply, manage IAM/network bootstrap, read bootstrap state, or write state. State contains sensitive data: access is limited to `dev/*` objects in the existing bucket; bucket object names and tenancy image metadata are inspectable.
+`bootstrap/agent` matches only `agent_instance_ocid` in the dev compartment. It creates separate planning and permanent MySQL/Vault provisioning policies. No IAM administration, compute mutation, or general network management. Network use grants are limited to subnets/NSGs needed by MySQL.
 
-Generate the RSA key on the agent host, outside Terraform and Git (do not overwrite an existing key):
+The provisioner can manage MySQL/HeatWave in dev; create/read/update Vaults and keys in dev (not delete/export/decrypt keys); read the `asre-mysql-admin` secret and bundles in dev; read network state; and read/create/overwrite four exact MySQL/Vault/Cloudflare state objects plus manage their lock objects. State-object deletion is excluded. Vault/key creation must be compartment-scoped before their OCIDs exist; it is not restricted to one vault. MySQL grants include deletion outside Terraform. The named-secret grant is not an immutable secret-ID pin: the bootstrap verifies the expected vault/key/compartment.
 
-```sh
-umask 077
-mkdir -p ~/.oci
-test ! -e ~/.oci/tf-agent.pem && test ! -e ~/.oci/tf-agent-public.pem &&
-  openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out ~/.oci/tf-agent.pem &&
-  openssl pkey -in ~/.oci/tf-agent.pem -pubout -out ~/.oci/tf-agent-public.pem
-```
+An administrator must review/apply IAM first. The plan removes the unused API-key identity resources; keep administrator credentials through the migration. Do not merely remove them from state and leave a live key. Clean up retired local profiles/keys privately after revocation; no local files are removed automatically.
 
-Only the public PEM goes to the administrator; never transfer the private key or a session archive. The dev compartment OCID and agent's primary email are configured in `root.hcl`. With existing administrator authentication and the public PEM available on the administrator host:
+Then on A1:
 
 ```sh
-export OCI_TF_PROFILE=tf-admin OCI_TF_AUTH=SecurityToken
-export OCI_AGENT_PUBLIC_KEY_FILE=<path-to-public-pem>
-cd bootstrap/agent
+export OCI_TF_AUTH=InstancePrincipal
+export OCI_BASTION_CLIENT_CIDR="$(curl -fsS --max-time 15 https://api.ipify.org)/32"
+oci --auth instance_principal --region ap-osaka-1 os object get \
+  --namespace-name axyygu1yi2iu --bucket-name chechia-terraform-state \
+  --name cloudflare/dev/global/abot/share/terraform.tfstate --file /dev/null
+# From mysql-vault or a Cloudflare stack:
 terragrunt hcl fmt
+terragrunt run -- init -input=false
 terragrunt run -- validate
-terragrunt run -- plan
-# Administrator reviews and applies separately, then obtains:
-terragrunt output -raw user_ocid
-terragrunt output -raw fingerprint
+terragrunt run -- plan -input=false
+# Review before apply. See the MySQL bootstrap workflow below.
 ```
 
-On the agent host, add a `[tf-agent]` profile to `~/.oci/config` using those outputs:
+The CIDR lets network config parse for output reads; do not apply network changes. No OCI API key/profile is required. Cloudflare still needs Wrangler OAuth. All code on A1 may exercise permanent resource/state/secret privileges; it is not Unix-user-scoped. Avoid unrelated/untrusted workloads. Update the exact OCID after VM replacement and verify effective grants after IAM propagation. IAM bootstrap/state and compute writes remain administrator-only. Existing `make auth`/SecurityToken defaults are unchanged.
 
-```ini
-[tf-agent]
-user=<user-ocid>
-fingerprint=<fingerprint>
-tenancy=<tenancy-ocid-from-root.hcl>
-region=ap-osaka-1
-key_file=/absolute/path/to/.oci/tf-agent.pem
-```
+### MySQL credentials and boot disks
 
-```sh
-chmod 600 ~/.oci/config ~/.oci/tf-agent.pem
-export OCI_TF_AUTH=APIKey OCI_TF_PROFILE=tf-agent
-cd dev/ap-osaka-1/asre/instance # or asre/amd or asre/mysql, from oracle/
-terragrunt hcl fmt
-terragrunt run -- init -reconfigure -input=false
-terragrunt run -- validate
-terragrunt run -- plan -lock=false
-```
+MySQL passwords are handled outside Terraform: [Vault/bootstrap workflow](dev/ap-osaka-1/asre/mysql/README.md). Populate Vault manually, run the script with an administrator to create/import the DB, then review the HeatWave plan. No Terraform password resource, password data source, or password output. Existing password-bearing state needs a separate migration; this script refuses it.
 
-Read-only credentials cannot create backend locks; do not run these unlocked plans during an apply. Do not save plan files in Git. Provider and backend both use the selected profile; Makefile OCI commands use it too. This identity cannot create Bastion sessions (`make ssh`) or update its allowlist. Do not run `make auth` for an API-key profile. Defaults remain `SecurityToken`/`tf`. Test effective permissions after administrator bootstrap; grants inherited from other policies must also be reviewed. Revoke the registered public key if the host is compromised.
+Compute instances preserve boot volumes on termination; backup policy remains disabled. Preservation is not a backup, and preserved disks are not automatically attached to replacement VMs. Review replacements, recovery steps, and retained-volume quota/cost separately.
 
 ## 2. Apply networking
 
