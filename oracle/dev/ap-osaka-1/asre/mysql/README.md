@@ -3,11 +3,11 @@
 For a new database only. Terraform manages a DEFAULT Vault, software AES key, and the imported MySQL/HeatWave configuration. Secret creation/content and password-bearing DB creation stay outside Terraform. This uses free-tier resource types, subject to tenancy quotas; review current pricing and plans.
 
 1. After an administrator applies `oracle/bootstrap/agent`, use A1 Instance Principal credentials to initialize, validate, review and apply `../mysql-vault` using Terragrunt. Obtain its `vault_id`, `key_id`, and `compartment_id` outputs.
-2. In the OCI console create a secret named `asre-mysql-admin` in that Vault/compartment, encrypted by that key. Enter a new MySQL-compatible password manually and keep its version CURRENT. Do not add secret content to Terraform or chat.
+2. Use the existing secret named `asre-mysql-secret` in that Vault/compartment, encrypted by that key. Keep a MySQL-compatible administrator password in its CURRENT version. Do not add secret content to Terraform or chat.
 3. From repo root, explicitly authorize creation:
 
    ```sh
-   export OCI_TF_AUTH=InstancePrincipal
+   export OCI_TF_AUTH=InstancePrincipal OCI_TF_PROFILE=tf-provision
    export OCI_BASTION_CLIENT_CIDR="$(curl -fsS --max-time 15 https://api.ipify.org)/32"
    oracle/scripts/bootstrap-mysql.sh --secret-id <secret-ocid> --create
    ```
