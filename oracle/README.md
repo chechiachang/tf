@@ -38,9 +38,21 @@ The stacks already use the `tf` profile with `SecurityToken`. Validate with `oci
 
 `bootstrap/agent` matches only `agent_instance_ocid` in the dev compartment. It creates separate planning and workload provisioning policies. IAM, network, state-bucket, and A1 management remain administrator-only. Network use grants are limited to subnets/NSGs needed by workloads.
 
-The provisioner can manage MySQL/HeatWave in dev; create/read/update Vaults and keys in dev (not delete/export/decrypt keys); read the `asre-mysql-secret` secret and bundles in dev; read network state; and read/create/overwrite five exact AMD/MySQL/Vault/Cloudflare state objects plus manage their lock objects. Network and A1 state are read-only, with lock-only access for planning; both bootstrap states remain inaccessible. State-object deletion is excluded. Vault/key creation must be compartment-scoped before their OCIDs exist; it is not restricted to one vault. MySQL grants include deletion outside Terraform. The named-secret grant is not an immutable secret-ID pin: the bootstrap verifies the expected vault/key/compartment.
+The provisioner can manage MySQL/HeatWave in dev; create/read/update Vaults and keys in dev (not delete/export/decrypt keys); read the `asre-mysql-secret` secret and bundles in dev; read network state; and read/create/overwrite seven exact workload state objects plus manage their lock objects. Network and A1 state are read-only, with lock-only access for planning; both bootstrap states remain inaccessible. State-object deletion is excluded. Vault/key creation must be compartment-scoped before their OCIDs exist; it is not restricted to one vault. MySQL grants include deletion outside Terraform. The named-secret grant is not an immutable secret-ID pin: the bootstrap verifies the expected vault/key/compartment.
 
 AMD instance update/delete/power and VNIC mutation require `TfWorkload.Scope=amd`. An administrator creates the tag namespace/key in `bootstrap/agent`, then applies the AMD tags with a reviewed plan (stop unexpected replacements). Never tag A1, its VNIC, or shared resources; do not configure an automatic tag default. A1 can launch new instances and use tags but cannot administer tags, IAM, existing untagged instances, boot/block volumes, or shared network resources. Cloudflare resource access still requires separate Cloudflare credentials. After IAM propagation, reconfigure stack/dependency backends and retry normal locked plans. MySQL creation authorization is still unverified.
+
+### Future Always Free workloads
+
+| Service | Delegated scope |
+| --- | --- |
+| Object Storage | Only `asre-artifacts` and `asre-backups`; bucket/object CRUD, no pre-authenticated URLs, replication, retention locks, or object-version deletion |
+| Notifications | New dev topics; mutations/subscriptions/publishing require `TfWorkload.Scope=notifications` |
+| Monitoring | Dev metrics read, custom `asre` metrics write, alarm listing only |
+
+Reserved state paths: `dev/ap-osaka-1/asre/storage/terraform.tfstate` and `dev/ap-osaka-1/asre/notifications/terraform.tfstate`. These stacks/resources are not created by this change. Future storage stacks must set `access_type=NoPublicAccess`; IAM bucket creation/update cannot enforce that setting. Existing named buckets need administrator review before granting access. Use the workload tag on topics at creation; do not change shared topics.
+
+[Always Free limits](https://docs.oracle.com/en-us/iaas/Content/FreeTier/freetier_topic-Always_Free_Resources.htm): free-only accounts have 20 GB combined object storage and 50,000 requests/month; Notifications has 1 million HTTPS and 1,000 email deliveries/month; Monitoring has 500 million ingestion and 1 billion retrieval points/month. Limits differ for paid/trial storage; permissions do not enforce free-tier limits. Compute, MySQL and Vault already have workload grants. Autonomous Database, NoSQL, APM, and Connector Hub are deferred until a concrete workload defines scoped access and secret handling. Block-volume mutation, Bastion, load balancers, shared logs/alarms, certificates/CAs, Resource Manager, IAM, network, and state-bucket management remain administrator-only.
 
 An administrator must review/apply IAM first. The plan removes the unused API-key identity resources; keep administrator credentials through the migration. Do not merely remove them from state and leave a live key. Clean up retired local profiles/keys privately after revocation; no local files are removed automatically.
 
