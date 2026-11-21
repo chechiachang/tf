@@ -34,18 +34,20 @@ Firefox needs an accessible graphical desktop; Xvfb alone does not provide remot
 
 The stacks already use the `tf` profile with `SecurityToken`. Validate with `oci session validate --profile tf --auth security_token` before planning. Keep `~/.oci` outside the repository. Do not replace an existing A1 instance just to install these tools.
 
-### A1 Instance Principal planning
+### A1 Instance Principal provisioning
 
-`bootstrap/agent` matches only `agent_instance_ocid` in the dev compartment. It creates separate planning and permanent MySQL/Vault provisioning policies. No IAM administration, compute mutation, or general network management. Network use grants are limited to subnets/NSGs needed by MySQL.
+`bootstrap/agent` matches only `agent_instance_ocid` in the dev compartment. It creates separate planning and workload provisioning policies. IAM, network, state-bucket, and A1 management remain administrator-only. Network use grants are limited to subnets/NSGs needed by workloads.
 
-The provisioner can manage MySQL/HeatWave in dev; create/read/update Vaults and keys in dev (not delete/export/decrypt keys); read the `asre-mysql-secret` secret and bundles in dev; read network state; and read/create/overwrite four exact MySQL/Vault/Cloudflare state objects plus manage their lock objects. State-object deletion is excluded. Vault/key creation must be compartment-scoped before their OCIDs exist; it is not restricted to one vault. MySQL grants include deletion outside Terraform. The named-secret grant is not an immutable secret-ID pin: the bootstrap verifies the expected vault/key/compartment.
+The provisioner can manage MySQL/HeatWave in dev; create/read/update Vaults and keys in dev (not delete/export/decrypt keys); read the `asre-mysql-secret` secret and bundles in dev; read network state; and read/create/overwrite five exact AMD/MySQL/Vault/Cloudflare state objects plus manage their lock objects. Network and A1 state are read-only, with lock-only access for planning; both bootstrap states remain inaccessible. State-object deletion is excluded. Vault/key creation must be compartment-scoped before their OCIDs exist; it is not restricted to one vault. MySQL grants include deletion outside Terraform. The named-secret grant is not an immutable secret-ID pin: the bootstrap verifies the expected vault/key/compartment.
+
+AMD instance update/delete/power and VNIC mutation require `TfWorkload.Scope=amd`. An administrator creates the tag namespace/key in `bootstrap/agent`, then applies the AMD tags with a reviewed plan (stop unexpected replacements). Never tag A1, its VNIC, or shared resources; do not configure an automatic tag default. A1 can launch new instances and use tags but cannot administer tags, IAM, existing untagged instances, boot/block volumes, or shared network resources. Cloudflare resource access still requires separate Cloudflare credentials. After IAM propagation, reconfigure stack/dependency backends and retry normal locked plans. MySQL creation authorization is still unverified.
 
 An administrator must review/apply IAM first. The plan removes the unused API-key identity resources; keep administrator credentials through the migration. Do not merely remove them from state and leave a live key. Clean up retired local profiles/keys privately after revocation; no local files are removed automatically.
 
 Then on A1:
 
 ```sh
-export OCI_TF_AUTH=InstancePrincipal
+export OCI_TF_AUTH=InstancePrincipal OCI_TF_PROFILE=tf-provision
 export OCI_BASTION_CLIENT_CIDR="$(curl -fsS --max-time 15 https://api.ipify.org)/32"
 oci --auth instance_principal --region ap-osaka-1 os object get \
   --namespace-name axyygu1yi2iu --bucket-name chechia-terraform-state \

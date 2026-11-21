@@ -46,19 +46,52 @@ resource "oci_identity_policy" "a1" {
 
 locals {
   provision_state_keys = [
+    "dev/ap-osaka-1/asre/amd/terraform.tfstate",
     "dev/ap-osaka-1/asre/mysql-vault/terraform.tfstate",
     "dev/ap-osaka-1/asre/mysql/terraform.tfstate",
     "cloudflare/dev/global/abot/share/terraform.tfstate",
     "cloudflare/dev/global/free/serverless/terraform.tfstate",
   ]
+  plan_only_state_keys = [
+    "dev/ap-osaka-1/network/terraform.tfstate",
+    "dev/ap-osaka-1/asre/instance/terraform.tfstate",
+  ]
+}
+
+resource "oci_identity_tag_namespace" "workload" {
+  compartment_id = var.compartment_ocid
+  name           = "TfWorkload"
+  description    = "Administrator-owned workload delegation; never tag A1 resources."
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+resource "oci_identity_tag" "workload_scope" {
+  tag_namespace_id = oci_identity_tag_namespace.workload.id
+  name             = "Scope"
+  description      = "AMD instances and VNICs delegated to A1."
+  validator {
+    validator_type = "ENUM"
+    values         = ["amd"]
+  }
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "oci_identity_policy" "a1_provision" {
   count          = var.instance_ocid == null ? 0 : 1
   compartment_id = var.tenancy_ocid
   name           = "tf-provision-a1"
-  description    = "Permanent MySQL/Vault provisioner; no IAM or compute administration."
+  description    = "Workload provisioner; no IAM, shared infrastructure, or A1 mutation."
   statements = concat([
+    # Launch only; existing instances/VNICs require the administrator's workload tag.
+    "Allow dynamic-group id ${oci_identity_dynamic_group.a1[0].id} to {INSTANCE_CREATE, VNIC_CREATE, VNIC_ATTACH, VNIC_ASSOCIATE_NETWORK_SECURITY_GROUP} in compartment id ${var.compartment_ocid} where request.operation = 'LaunchInstance'",
+    "Allow dynamic-group id ${oci_identity_dynamic_group.a1[0].id} to {INSTANCE_UPDATE, INSTANCE_DELETE, INSTANCE_POWER_ACTIONS} in compartment id ${var.compartment_ocid} where target.resource.tag.TfWorkload.Scope = 'amd'",
+    "Allow dynamic-group id ${oci_identity_dynamic_group.a1[0].id} to {VNIC_UPDATE, VNIC_DELETE, VNIC_DETACH, VNIC_ASSOCIATE_NETWORK_SECURITY_GROUP, VNIC_DISASSOCIATE_NETWORK_SECURITY_GROUP} in compartment id ${var.compartment_ocid} where target.resource.tag.TfWorkload.Scope = 'amd'",
+    "Allow dynamic-group id ${oci_identity_dynamic_group.a1[0].id} to use tag-namespaces in compartment id ${var.compartment_ocid} where all {target.tag-namespace.id = '${oci_identity_tag_namespace.workload.id}', request.operation != 'CreateTag', request.operation != 'UpdateTag', request.operation != 'BulkEditTags'}",
+    "Allow dynamic-group id ${oci_identity_dynamic_group.a1[0].id} to {VNIC_ASSOCIATE_NETWORK_SECURITY_GROUP, VNIC_DISASSOCIATE_NETWORK_SECURITY_GROUP} in compartment id ${var.compartment_ocid} where any {request.operation = 'CreateDbSystem', request.operation = 'UpdateDbSystem'}",
     "Allow dynamic-group id ${oci_identity_dynamic_group.a1[0].id} to manage mysql-family in compartment id ${var.compartment_ocid}",
     "Allow dynamic-group id ${oci_identity_dynamic_group.a1[0].id} to use subnets in compartment id ${var.compartment_ocid}",
     "Allow dynamic-group id ${oci_identity_dynamic_group.a1[0].id} to use network-security-groups in compartment id ${var.compartment_ocid}",
@@ -70,7 +103,7 @@ resource "oci_identity_policy" "a1_provision" {
     "Allow dynamic-group id ${oci_identity_dynamic_group.a1[0].id} to manage objects in tenancy where all {target.bucket.name = '${var.bucket_name}', target.object.name = 'dev/ap-osaka-1/asre/mysql/bootstrap.lock'}",
     ], [for key in local.provision_state_keys :
     "Allow dynamic-group id ${oci_identity_dynamic_group.a1[0].id} to {OBJECT_READ, OBJECT_CREATE, OBJECT_OVERWRITE} in tenancy where all {target.bucket.name = '${var.bucket_name}', target.object.name = '${key}'}"
-    ], [for key in local.provision_state_keys :
+    ], [for key in concat(local.provision_state_keys, local.plan_only_state_keys) :
     "Allow dynamic-group id ${oci_identity_dynamic_group.a1[0].id} to manage objects in tenancy where all {target.bucket.name = '${var.bucket_name}', target.object.name = '${key}.lock'}"
   ])
 }
