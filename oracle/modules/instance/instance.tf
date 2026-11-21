@@ -15,6 +15,9 @@ module "free_arm_instance" {
   ssh_public_keys             = var.ssh_public_key
   user_data                   = var.user_data
 
+  # Only AMD workloads receive delegation; A1 instances and VNICs stay untagged.
+  defined_tags = var.shape == "VM.Standard.E2.1.Micro" ? { "TfWorkload.Scope" = "amd" } : {}
+
   public_ip                 = "NONE"
   assign_public_ip          = false
   boot_volume_size_in_gbs   = var.boot_volume_size_in_gbs
