@@ -21,6 +21,11 @@ packages:
   - tmux
   - earlyoom
 write_files:
+  - path: /usr/local/bin/configure-rex
+    owner: root:root
+    permissions: '0755'
+    encoding: b64
+    content: ${rex_config}
   - path: /usr/local/sbin/install-rex
     owner: root:root
     permissions: '0700'
@@ -63,3 +68,4 @@ runcmd:
     systemctl enable --now docker.service
   - [/usr/local/sbin/setup-agents, worker]
   - [/usr/local/sbin/install-rex]
+  - [sudo, -H, -u, agent, /usr/local/bin/configure-rex]
