@@ -21,6 +21,11 @@ packages:
   - tmux
   - earlyoom
 write_files:
+  - path: /usr/local/sbin/install-rex
+    owner: root:root
+    permissions: '0700'
+    encoding: b64
+    content: ${rex_setup}
   - path: /etc/sysctl.d/99-swap.conf
     content: vm.swappiness=20
   - path: /usr/local/sbin/setup-agents
@@ -57,3 +62,4 @@ runcmd:
     chmod 0755 /usr/local/bin/terragrunt
     systemctl enable --now docker.service
   - [/usr/local/sbin/setup-agents, worker]
+  - [/usr/local/sbin/install-rex]

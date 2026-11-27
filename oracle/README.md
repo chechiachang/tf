@@ -234,3 +234,9 @@ The instance NSG allows outbound UDP 3478/41641 and HTTPS 443 for Tailscale DERP
 Existing VMs do not rerun cloud-init when metadata changes. Copy `scripts/setup-agents.sh` to each VM through Bastion and run `sudo bash setup-agents.sh hub` on ARM or `sudo bash setup-agents.sh worker` on each micro, then enroll. Copy `scripts/configure-herdr-workers.sh` to A1, install it with `sudo install -m 0755 configure-herdr-workers.sh /usr/local/bin/configure-herdr-workers`, and run `configure-herdr-workers` as `agent`. Do not replace VMs just to install these tools.
 
 State is in the private, versioned `chechia-terraform-state` bucket; never delete it or commit state, credentials, or private keys. Replacing an instance deletes its boot disk; shrinking a disk requires replacement. Review instance plans carefully when changing cloud-init.
+
+## Rex preview
+
+New ARM/AMD hosts install Rex preview via a checksum-verified installer. Services remain stopped; no ingress is added. The installer adds a signed apt repository and replaces Ubuntu's unrelated `rex` package if present. Preview packages track the channel, not a fixed version.
+
+Existing hosts: run `sudo sh oracle/scripts/install-rex.sh` from this checkout, then `rex --version`. Do not apply cloud-init changes or replace the A1 VM to install Rex; preserve its current root disk. Run `rex server install` as `agent` (not root) when ready to start a per-user server; review access first. If the installer checksum changes, review the new script before updating it.

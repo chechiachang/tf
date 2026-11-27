@@ -19,6 +19,11 @@ packages:
   - pipx
   - xdg-utils
 write_files:
+  - path: /usr/local/sbin/install-rex
+    owner: root:root
+    permissions: '0700'
+    encoding: b64
+    content: ${rex_setup}
   - path: /usr/local/sbin/setup-agents
     owner: root:root
     permissions: '0700'
@@ -58,3 +63,4 @@ runcmd:
     chmod 0755 /usr/local/bin/terragrunt
     systemctl enable --now docker.service
   - [/usr/local/sbin/setup-agents, hub]
+  - [/usr/local/sbin/install-rex]
