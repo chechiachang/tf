@@ -9,6 +9,11 @@
   "grants": [
     {
       "src": ["group:operators"],
+      "dst": ["autogroup:self"],
+      "ip": ["tcp:443"]
+    },
+    {
+      "src": ["group:operators"],
       "dst": ["tag:pi-hub", "tag:pi-worker"],
       "ip": ["tcp:22"]
     },

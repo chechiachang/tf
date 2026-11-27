@@ -34,6 +34,8 @@ inputs = {
   network_security_group_ocid = dependency.network.outputs.instance_nsg_ocid
   ssh_public_key              = include.root.locals.ssh_public_keys
   user_data = base64encode(templatefile("${get_terragrunt_dir()}/cloud-init.yaml", {
+    rex_config          = filebase64("${get_repo_root()}/oracle/scripts/configure-rex.sh")
+    rex_setup           = filebase64("${get_repo_root()}/oracle/scripts/install-rex.sh")
     agent_setup         = filebase64("${get_repo_root()}/oracle/scripts/setup-agents.sh")
     herdr_workers_setup = filebase64("${get_repo_root()}/oracle/scripts/configure-herdr-workers.sh")
   }))

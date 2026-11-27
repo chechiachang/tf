@@ -234,3 +234,25 @@ The instance NSG allows outbound UDP 3478/41641 and HTTPS 443 for Tailscale DERP
 Existing VMs do not rerun cloud-init when metadata changes. Copy `scripts/setup-agents.sh` to each VM through Bastion and run `sudo bash setup-agents.sh hub` on ARM or `sudo bash setup-agents.sh worker` on each micro, then enroll. Copy `scripts/configure-herdr-workers.sh` to A1, install it with `sudo install -m 0755 configure-herdr-workers.sh /usr/local/bin/configure-herdr-workers`, and run `configure-herdr-workers` as `agent`. Do not replace VMs just to install these tools.
 
 State is in the private, versioned `chechia-terraform-state` bucket; never delete it or commit state, credentials, or private keys. Replacing an instance deletes its boot disk; shrinking a disk requires replacement. Review instance plans carefully when changing cloud-init.
+
+## Rex preview
+
+New ARM/AMD hosts install checksum-verified Rex preview and start a persistent personal server as `agent`. Access uses existing Tailscale SSH; no public ingress, HTTPS certificates, auth keys, or host Tailscale upgrade are needed.
+
+Existing hosts: copy both scripts from `oracle/scripts/` over SSH, then:
+
+```sh
+sudo sh install-rex.sh
+sudo install -m 0755 configure-rex.sh /usr/local/bin/configure-rex
+sudo loginctl enable-linger agent
+sudo -H -u agent configure-rex
+rex version
+```
+
+On iPhone, enable Tailscale and add `ssh://agent@100.120.109.21` (arm1) as a remote host in Rex. Complete any Tailscale identity check in the browser. Use the current host address from `tailscale status`; no separate Rex device enrollment is needed.
+
+Optional built-in Tailscale: run `configure-rex rex-arm1 tailscale` as `agent` after reviewing sessions and stopping both `rex.socket` and `rex.service`. Enroll **without tags** using the iPhone's Tailscale account, enable MagicDNS/HTTPS certificates, and merge the operator → own devices TCP 443 grant from [the tailnet policy](../tailscale/dev/global/tailnet/policy.hujson) if needed. Add the HTTPS address from `rex server status` in the client. Never add `--allow-anonymous` or `--tailscale-allow-tailnet-members`. If enrollment preceded enabling HTTPS, retry with `rex server tailscale on`.
+
+The helper persists listener options in a systemd user drop-in; `rex server start --tailscale` alone does not survive reboot. Logs: `sudo -H -u agent env XDG_RUNTIME_DIR=/run/user/$(id -u agent) journalctl --user -u rex`. Rollback: disable `rex.socket` and `rex.service` as `agent`; remove any optional Rex Tailscale device.
+
+Do not apply cloud-init changes to existing VMs or replace their disks. The installer adds a repository-scoped signing key and rex-only apt pin; it replaces Ubuntu's unrelated `rex` package and tracks preview, not a fixed package version. Re-review the installer before updating its checksum.

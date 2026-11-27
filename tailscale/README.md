@@ -28,6 +28,8 @@ device_tags = {
 
 Operators can SSH as `agent` or `ubuntu` on tagged hubs/workers, with Tailscale's interactive identity check: `ssh ubuntu@pi-hub` (or `pi-worker1` / `pi-worker2`). Hub-to-worker automation remains `agent` only; root login is not granted.
 
+Rex's built-in Tailscale uses separate, untagged, user-owned devices. The operator → `autogroup:self` `tcp:443` grant permits HTTPS to the operator's own devices; Rex also restricts callers to its device owner. Enable HTTPS certificates in the tailnet DNS console. No Rex tags or host Tailscale upgrade are needed.
+
 Run from `tailscale/dev/global/tailnet/`:
 
 ```sh
